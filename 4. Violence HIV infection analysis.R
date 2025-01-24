@@ -2272,10 +2272,18 @@ dev.off()
 
 #### subgroup analyses
 
-## correlation
+# Define rho (correlation coefficient)
 rho <- 0.6
 
+#### subgroup analyses
+
 ## recent violence
+
+# Ensure the dataframes are loaded
+# Example of loading dataframes (replace with your actual data loading code)
+# fsw_data_pv_recent <- read.csv("path_to_fsw_data_pv_recent.csv")
+# fsw_data_sv_recent <- read.csv("path_to_fsw_data_sv_recent.csv")
+# fsw_data_psv_recent <- read.csv("path_to_fsw_data_psv_recent.csv")
 
 # List of dataframes to loop over
 dataframes <- list(fsw_data_pv_recent, fsw_data_sv_recent, fsw_data_psv_recent)
@@ -2286,6 +2294,7 @@ subgroup_columns <- c("ldc_bin", "pre_2016", "recruitment", "perpetrator", "who_
 
 # List to store results
 results_list <- list()
+skipped_results_list <- list()
 
 # Loop through each dataframe
 for (i in 1:length(dataframes)) {
@@ -2309,9 +2318,17 @@ for (i in 1:length(dataframes)) {
       # Filter data for the current level
       subgroup_df <- filtered_df[filtered_df[[column]] == level, ]
       
-      # Skip iteration if k <= 1
-      if (nrow(subgroup_df) <= 1) {
-        message(paste("Skipping", current_df_name, column, "=", level, "because k <= 1"))
+      # Handle cases with only one study
+      if (nrow(subgroup_df) == 1) {
+        message(paste("Only one study for", current_df_name, column, "=", level))
+        results_list[[length(results_list) + 1]] <- data.frame(
+          dataframe = current_df_name,
+          column = column,
+          level = level,
+          pooled_OR = exp(subgroup_df$effect_best_ln),
+          lower_CI = exp(subgroup_df$effect_best_lower_ln),
+          upper_CI = exp(subgroup_df$effect_best_upper_ln)
+        )
         next
       }
       
@@ -2381,5 +2398,14 @@ for (i in 1:length(dataframes)) {
   }
 }
 
-# Convert the results list to a dataframe
-results_df <- do.call(rbind, results_list)
+# Combine the results list and skipped results list
+all_results_list <- c(results_list, skipped_results_list)
+
+# Convert the combined results list to a dataframe
+results_df <- do.call(rbind, all_results_list)
+
+# Split the results_df into three dataframes
+fsw_data_pv_recent_results <- results_df[results_df$dataframe == "fsw_data_pv_recent", ]
+fsw_data_sv_recent_results <- results_df[results_df$dataframe == "fsw_data_sv_recent", ]
+fsw_data_psv_recent_results <- results_df[results_df$dataframe == "fsw_data_psv_recent", ]
+
