@@ -2180,9 +2180,13 @@ dev.off()
 
 ### ever exposed ###
 
+#### overall forest plots ####
+
+### ever exposed ###
+
 ## load dataframe
 
-summary_violence_ever <- read_excel("Violence estimates.xlsx", "Ever") 
+summary_violence_ever <- read_excel("Violence estimates.xlsx", "HIV infection - ever") 
 
 ## forest plot
 
@@ -2226,7 +2230,7 @@ dev.off()
 
 ## load dataframe
 
-summary_violence_recent <- read_excel("Violence estimates.xlsx", "Recent") 
+summary_violence_recent <- read_excel("Violence estimates.xlsx", "HIV infection - recent") 
 
 ## forest plot
 
@@ -2266,10 +2270,6 @@ summary_hiv_violence_recent <- forest(summary_hiv_violence_recent,
                                     print.subgroup.name = FALSE) 
 dev.off()
 
-
-
-}
-
 #### subgroup analyses
 
 # Define rho (correlation coefficient)
@@ -2278,12 +2278,6 @@ rho <- 0.6
 #### subgroup analyses
 
 ## recent violence
-
-# Ensure the dataframes are loaded
-# Example of loading dataframes (replace with your actual data loading code)
-# fsw_data_pv_recent <- read.csv("path_to_fsw_data_pv_recent.csv")
-# fsw_data_sv_recent <- read.csv("path_to_fsw_data_sv_recent.csv")
-# fsw_data_psv_recent <- read.csv("path_to_fsw_data_psv_recent.csv")
 
 # List of dataframes to loop over
 dataframes <- list(fsw_data_pv_recent, fsw_data_sv_recent, fsw_data_psv_recent)
