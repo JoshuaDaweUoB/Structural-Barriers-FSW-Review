@@ -707,7 +707,6 @@ forest(result2,
        col.subgroup = "black")
 
 dev.off()
-
 }
 
 ### physical and/or sexual violence ###
@@ -1331,7 +1330,7 @@ result <- rma.mv(effect_best_ln,
                  random = ~ 1 | study_num / effect_num,
                  data = filtered_df,   
                  sparse = TRUE)       
-
+    
 result 
 exp(coef(result))
     
@@ -1390,7 +1389,7 @@ result <- rma.mv(effect_best_ln,
                  random = ~ 1 | study_num / effect_num,
                  data = filtered_df,   
                  sparse = TRUE)       
-
+    
 result 
 exp(coef(result))
     
@@ -1454,7 +1453,7 @@ result <- rma.mv(unadj_est_ln,
                  random = ~ 1 | study_num / effect_num,
                  data = filtered_df,   
                  sparse = TRUE)       
-
+    
 result 
 exp(coef(result))
     
@@ -1513,7 +1512,7 @@ result <- rma.mv(unadj_est_ln,
                  random = ~ 1 | study_num / effect_num,
                  data = filtered_df,   
                  sparse = TRUE)       
-
+    
 result 
 exp(coef(result))
     
@@ -1577,7 +1576,7 @@ result <- rma.mv(adj_est_ln,
                  random = ~ 1 | study_num / effect_num,
                  data = filtered_df,   
                  sparse = TRUE)       
-
+    
 result 
 exp(coef(result))
     
@@ -1636,7 +1635,7 @@ result <- rma.mv(adj_est_ln,
                  random = ~ 1 | study_num / effect_num,
                  data = filtered_df,   
                  sparse = TRUE)       
-
+    
 result 
 exp(coef(result))
     
@@ -1700,7 +1699,7 @@ result <- rma.mv(effect_best_ln,
                  random = ~ 1 | study_num / effect_num,
                  data = filtered_df,   
                  sparse = TRUE)       
-
+    
 result 
 exp(coef(result))
     
@@ -1759,7 +1758,7 @@ result <- rma.mv(effect_best_ln,
                  random = ~ 1 | study_num / effect_num,
                  data = filtered_df,   
                  sparse = TRUE)       
-
+    
 result 
 exp(coef(result))
     
@@ -1824,7 +1823,7 @@ result <- rma.mv(unadj_est_ln,
                  random = ~ 1 | study_num / effect_num,
                  data = filtered_df,   
                  sparse = TRUE)       
-
+    
 result 
 exp(coef(result))
     
@@ -1883,7 +1882,7 @@ result <- rma.mv(unadj_est_ln,
                  random = ~ 1 | study_num / effect_num,
                  data = filtered_df,   
                  sparse = TRUE)       
-
+    
 result 
 exp(coef(result))
     
@@ -1947,7 +1946,7 @@ result <- rma.mv(adj_est_ln,
                  random = ~ 1 | study_num / effect_num,
                  data = filtered_df,   
                  sparse = TRUE)       
-
+    
 result 
 exp(coef(result))
     
@@ -2006,7 +2005,7 @@ result <- rma.mv(adj_est_ln,
                  random = ~ 1 | study_num / effect_num,
                  data = filtered_df,   
                  sparse = TRUE)       
-
+    
 result 
 exp(coef(result))
     
@@ -2070,7 +2069,7 @@ result <- rma.mv(effect_best_ln,
                  random = ~ 1 | study_num / effect_num,
                  data = filtered_df,   
                  sparse = TRUE)       
-
+    
 result 
 exp(coef(result))
     
@@ -2129,7 +2128,7 @@ result <- rma.mv(effect_best_ln,
                  random = ~ 1 | study_num / effect_num,
                  data = filtered_df,   
                  sparse = TRUE)       
-
+    
 result 
 exp(coef(result))
     
@@ -2273,6 +2272,9 @@ dev.off()
 
 #### subgroup analyses
 
+## correlation
+rho <- 0.6
+
 ## recent violence
 
 # List of dataframes to loop over
@@ -2281,6 +2283,9 @@ dataframe_names <- c("fsw_data_pv_recent", "fsw_data_sv_recent", "fsw_data_psv_r
 
 # Define the columns for subgroup analysis
 subgroup_columns <- c("ldc_bin", "pre_2016", "recruitment", "perpetrator", "who_region")
+
+# List to store results
+results_list <- list()
 
 # Loop through each dataframe
 for (i in 1:length(dataframes)) {
@@ -2342,6 +2347,16 @@ for (i in 1:length(dataframes)) {
       result2$lower.random <- result$ci.lb
       result2$upper.random <- result$ci.ub
       
+      # Store the results in the list
+      results_list[[length(results_list) + 1]] <- data.frame(
+        dataframe = current_df_name,
+        column = column,
+        level = level,
+        pooled_OR = exp(result$b),
+        lower_CI = exp(result$ci.lb),
+        upper_CI = exp(result$ci.ub)
+      )
+      
       # Create a unique filename for the forest plot
       filename <- paste0("Plots/subgroups/", current_df_name, "_", column, "_", level, ".png")
       
@@ -2366,14 +2381,5 @@ for (i in 1:length(dataframes)) {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
+# Convert the results list to a dataframe
+results_df <- do.call(rbind, results_list)
