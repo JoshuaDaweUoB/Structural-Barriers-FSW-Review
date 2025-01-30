@@ -141,97 +141,53 @@ for (violence_type in names(dataframes)) {
 
 #### overall forest plots ####
 
-### ever exposed ###
+# Function to create forest plots
+create_forest_plot <- function(data, effect_col, lower_col, upper_col, studlab_col, byvar_col, filename) {
+  # Perform meta-analysis
+  summary_hiv_violence <- metagen(TE = data[[effect_col]],
+                                  lower = data[[lower_col]],
+                                  upper = data[[upper_col]],
+                                  studlab = data[[studlab_col]],
+                                  data = data,
+                                  sm = "OR",
+                                  method.tau = "DL",
+                                  comb.fixed = FALSE,
+                                  comb.random = FALSE, 
+                                  backtransf = TRUE,
+                                  byvar = data[[byvar_col]],
+                                  text.random = "Overall")
+  
+  # Print summary
+  print(summary(summary_hiv_violence))
+  
+  # Save forest plot
+  png(filename = filename, width = 25, height = 14, units = "cm", res = 600)
+  forest(summary_hiv_violence, 
+         sortvar = data[[studlab_col]],
+         xlim = c(0.2, 4),             
+         leftcols = c("name", "studies", "estimates"), 
+         leftlabs = c("Pooled exposure", "Studies", "Estimates"),
+         rightcols = c("or_95_2", "i2"), 
+         rightlabs = c("OR (95% CI)", "I²"), 
+         pooled.totals = FALSE,
+         xintercept = 1,
+         addrow.overall = TRUE,
+         test.subgroup = FALSE,
+         overall.hetstat = FALSE,
+         overall = FALSE,
+         labeltext = TRUE,
+         col.subgroup = "black",
+         print.subgroup.name = FALSE)
+  dev.off()
+}
 
-#### overall forest plots ####
+# Load dataframes
+summary_violence_ever <- read_excel("Violence estimates.xlsx", "HIV infection - ever")
+summary_violence_recent <- read_excel("Violence estimates.xlsx", "HIV infection - recent")
 
-### ever exposed ###
-
-## load dataframe
-
-summary_violence_ever <- read_excel("Violence estimates.xlsx", "HIV infection - ever") 
-
-## forest plot
-
-summary_hiv_violence_ever  <- metagen(TE = effect_ln_2,
-                                      lower = lower_ln_2,
-                                      upper = upper_ln_2,
-                                      studlab = name,
-                                      data = summary_violence_ever,
-                                      sm = "OR",
-                                      method.tau = "DL",
-                                      comb.fixed = FALSE,
-                                      comb.random = FALSE, 
-                                      backtransf = TRUE,
-                                      byvar = Adjust,
-                                      text.random = "Overall")
-
-summary(summary_hiv_violence_ever) 
-
-filename <- paste0("Plots/overall plots/violence_ever_overall.png")
-png(filename = filename, width = 25, height = 14, units = "cm", res = 600)
-
-summary_hiv_violence_ever <- forest(summary_hiv_violence_ever, 
-                                         sortvar = name,
-                                         xlim=c(0.2, 4),             
-                                         leftcols = c("name", "studies", "estimates"), 
-                                         leftlabs = c("Pooled exposure", "Studies", "Estimates"),
-                                         rightcols = c("or_95_2", "i2"), 
-                                         rightlabs = c("OR (95% CI)", "I²"), 
-                                         pooled.totals = F,
-                                         xintercept=1,
-                                         addrow.overall = T,
-                                         test.subgroup = F,
-                                         overall.hetstat = F,
-                                         overall = F,
-                                         labeltext = TRUE,
-                                         col.subgroup = "black",
-                                         print.subgroup.name = FALSE) 
-dev.off()
-
-### recent exposed ###
-
-## load dataframe
-
-summary_violence_recent <- read_excel("Violence estimates.xlsx", "HIV infection - recent") 
-
-## forest plot
-
-summary_hiv_violence_recent  <- metagen(TE = effect_ln_2,
-                                      lower = lower_ln_2,
-                                      upper = upper_ln_2,
-                                      studlab = name,
-                                      data = summary_violence_recent,
-                                      sm = "OR",
-                                      method.tau = "DL",
-                                      comb.fixed = FALSE,
-                                      comb.random = FALSE, 
-                                      backtransf = TRUE,
-                                      byvar = Adjust,
-                                      text.random = "Overall")
-
-summary(summary_hiv_violence_recent) 
-
-filename <- paste0("Plots/overall plots/violence_recent_overall.png")
-png(filename = filename, width = 25, height = 14, units = "cm", res = 600)
-
-summary_hiv_violence_recent <- forest(summary_hiv_violence_recent, 
-                                    sortvar = name,
-                                    xlim=c(0.2, 4),             
-                                    leftcols = c("name", "studies", "estimates"), 
-                                    leftlabs = c("Pooled exposure", "Studies", "Estimates"),
-                                    rightcols = c("or_95_2", "i2"), 
-                                    rightlabs = c("OR (95% CI)", "I²"), 
-                                    pooled.totals = F,
-                                    xintercept=1,
-                                    addrow.overall = T,
-                                    test.subgroup = F,
-                                    overall.hetstat = F,
-                                    overall = F,
-                                    labeltext = TRUE,
-                                    col.subgroup = "black",
-                                    print.subgroup.name = FALSE) 
-dev.off()
+# Create forest plots
+create_forest_plot(summary_violence_ever, "effect_ln_2", "lower_ln_2", "upper_ln_2", "name", "Adjust", "Plots/overall plots/violence_ever_overall.png")
+create_forest_plot(summary_violence_recent, "effect_ln_2", "lower_ln_2", "upper_ln_2", "name", "Adjust", "Plots/overall plots/violence_recent_overall.png")
 
 #### subgroup analyses
 
@@ -241,7 +197,6 @@ rho <- 0.6
 #### subgroup analyses
 
 ## recent violence
-
 
 # Define the columns for subgroup analysis
 subgroup_columns <- c("ldc_bin", "pre_2016", "recruitment", "perpetrator", "who_region")
