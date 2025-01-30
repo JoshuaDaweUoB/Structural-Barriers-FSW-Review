@@ -1,5 +1,5 @@
 # load packages 
-pacman::p_load("meta", "metafor", "readxl", "tidyverse", "kableExtra", "robumeta", "clubSandwich") 
+pacman::p_load("meta", "metafor", "readxl", "openxlsx", "tidyverse", "kableExtra", "robumeta", "clubSandwich") 
 
 # set working directory
 setwd("C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence")
@@ -1238,29 +1238,30 @@ rho <- 0.6
 
 ## recent violence
 
-# List of dataframes to loop over
-dataframes <- list(fsw_data_pv_recent, fsw_data_sv_recent, fsw_data_psv_recent)
-dataframe_names <- c("fsw_data_pv_recent", "fsw_data_sv_recent", "fsw_data_psv_recent")
 
 # Define the columns for subgroup analysis
 subgroup_columns <- c("ldc_bin", "pre_2016", "recruitment", "perpetrator", "who_region")
 
 # Subgroup random effects model with constant sampling correlation working model
 
-# Create a covariance matrix assuming constant sampling correlation within subgroups
-V_subgroup <- impute_covariance_matrix(fsw_data_pv_recent$unadj_var_ln, 
+# dataframes to loop over
+dataframes <- list(fsw_data_pv_recent, fsw_data_sv_recent, fsw_data_psv_recent)
+dataframe_names <- c("fsw_data_pv_recent", "fsw_data_sv_recent", "fsw_data_psv_recent")
+
+# covariance matrix assuming constant sampling correlation within subgroups
+V_subgroup <- impute_covariance_matrix(fsw_data_pv_recent$effect_best_var_ln, 
                                        cluster = fsw_data_pv_recent$study_num, 
                                        r = rho,
                                        smooth_vi = TRUE,
                                        subgroup = fsw_data_pv_recent$ldc_bin)
 
-# Fit random effects working model in metafor
-subgroup_model <- rma.mv(unadj_est_ln ~ ldc_bin + pre_2016 + recruitment + perpetrator + who_region,
+# random effects working model in metafor
+subgroup_model <- rma.mv(effect_best_ln ~ 0 + ldc_bin + pre_2016 + recruitment + perpetrator + who_region,
                          V = V_subgroup, 
                          random = list(~ ldc_bin | study_num), struct = "DIAG",
                          data = fsw_data_pv_recent, sparse = TRUE)
 
-subgroup_model # Note that this reports model-based (not robust) standard errors
+subgroup_model 
 
 # RVE standard errors
 CI_subgroup <- conf_int(subgroup_model, vcov = "CR2")
@@ -1306,6 +1307,182 @@ cat("Reference category for pre_2016:", pre_2016_levels[1], "\n")
 cat("Reference category for recruitment:", recruitment_levels[1], "\n")
 cat("Reference category for perpetrator:", perpetrator_levels[1], "\n")
 cat("Reference category for who_region:", who_region_levels[1], "\n")
+
+# Define rho (correlation coefficient)
+rho <- 0.6
+
+# Load necessary libraries
+library(readxl)
+library(tidyverse)
+library(metafor)
+library(clubSandwich)
+library(openxlsx)
+
+# Define rho (correlation coefficient)
+rho <- 0.6
+
+# List of subgroups and dataframes to loop over
+subgroup_vars <- c("ldc_bin", "pre_2016", "recruitment", "perpetrator", "who_region")
+dataframe_names <- c("fsw_data_pv_recent", "fsw_data_sv_recent", "fsw_data_psv_recent")
+
+# Function to perform the analysis and save results
+perform_analysis <- function(df, dataframe_name, subgroup_var) {
+  # Create a covariance matrix assuming constant sampling correlation within subgroups
+  V_subgroup <- impute_covariance_matrix(df$effect_best_var_ln, 
+                                         cluster = df$study_num, 
+                                         r = rho,
+                                         smooth_vi = TRUE,
+                                         subgroup = df[[subgroup_var]])
+  
+  # Fit random effects working model in metafor with different optimizer and increased iterations
+  subgroup_model <- tryCatch({
+    rma.mv(effect_best_ln ~ ldc_bin + pre_2016 + recruitment + perpetrator + who_region,
+           V = V_subgroup, 
+           random = list(~ get(subgroup_var) | study_num), struct = "DIAG",
+           data = df, sparse = TRUE,
+           control = list(optimizer = "optim", maxit = 10000))
+  }, error = function(e) {
+    warning(paste("Model did not converge for", subgroup_var, "in", dataframe_name, ":", e$message))
+    return(NULL)
+  })
+  
+  # Check if the model is NULL (did not converge)
+  if (is.null(subgroup_model)) {
+    return(NULL)
+  }
+  
+  # Exponentiate the model estimates and CIs to convert them back to the original scale
+  exp_estimates <- exp(subgroup_model$b)
+  exp_CI_lower <- exp(subgroup_model$ci.lb)
+  exp_CI_upper <- exp(subgroup_model$ci.ub)
+  
+  # Combine the results into a data frame for easier interpretation
+  results <- data.frame(
+    Estimate = exp_estimates,
+    CI_Lower = exp_CI_lower,
+    CI_Upper = exp_CI_upper
+  )
+  
+  # Save the results to an Excel file with the variable and dataframe names as suffixes
+  write.xlsx(results, paste0("results_", subgroup_var, "_", dataframe_name, ".xlsx"))
+  
+  # Print the results
+  print(results)
+}
+
+# Loop over each dataframe and each subgroup variable to perform the analysis
+for (dataframe_name in dataframe_names) {
+  df <- get(dataframe_name)
+  for (subgroup_var in subgroup_vars) {
+    perform_analysis(df, dataframe_name, subgroup_var)
+  }
+}
+
+
+# Load necessary libraries
+library(readxl)
+library(tidyverse)
+library(metafor)
+library(clubSandwich)
+library(openxlsx)
+
+# Define rho (correlation coefficient)
+rho <- 0.6
+
+# List of subgroups and dataframes to loop over
+subgroup_vars <- c("ldc_bin", "pre_2016", "recruitment", "perpetrator", "who_region")
+dataframe_names <- c("fsw_data_pv_recent", "fsw_data_sv_recent", "fsw_data_psv_recent")
+
+# Function to perform the analysis and save results
+perform_analysis <- function(df, dataframe_name, subgroup_var) {
+  # Create a covariance matrix assuming constant sampling correlation within subgroups
+  V_subgroup <- impute_covariance_matrix(df$effect_best_var_ln, 
+                                         cluster = df$study_num, 
+                                         r = rho,
+                                         smooth_vi = TRUE,
+                                         subgroup = df[[subgroup_var]])
+  
+  # Fit random effects working model in metafor with different optimizer and increased iterations
+  subgroup_model <- tryCatch({
+    rma.mv(effect_best_ln ~ ldc_bin + pre_2016 + recruitment + perpetrator + who_region,
+           V = V_subgroup, 
+           random = list(~ get(subgroup_var) | study_num), struct = "DIAG",
+           data = df, sparse = TRUE,
+           control = list(optimizer = "optim", maxit = 10000))
+  }, error = function(e) {
+    warning(paste("Model did not converge for", subgroup_var, "in", dataframe_name, ":", e$message))
+    return(NULL)
+  })
+  
+  # Check if the model is NULL (did not converge)
+  if (is.null(subgroup_model)) {
+    return(NULL)
+  }
+  
+  # Exponentiate the model estimates and CIs to convert them back to the original scale
+  exp_estimates <- exp(subgroup_model$b)
+  exp_CI_lower <- exp(subgroup_model$ci.lb)
+  exp_CI_upper <- exp(subgroup_model$ci.ub)
+  
+  # Combine the results into a data frame for easier interpretation
+  results <- data.frame(
+    Category = rownames(subgroup_model$b),
+    Estimate = exp_estimates,
+    CI_Lower = exp_CI_lower,
+    CI_Upper = exp_CI_upper
+  )
+  
+  # Save the results to an Excel file with the variable and dataframe names as suffixes
+  write.xlsx(results, paste0("results_", subgroup_var, "_", dataframe_name, ".xlsx"))
+  
+  # Print the results
+  print(results)
+}
+
+# Loop over each dataframe and each subgroup variable to perform the analysis
+for (dataframe_name in dataframe_names) {
+  df <- get(dataframe_name)
+  for (subgroup_var in subgroup_vars) {
+    perform_analysis(df, dataframe_name, subgroup_var)
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
