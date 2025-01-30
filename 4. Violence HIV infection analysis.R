@@ -24,373 +24,146 @@ rho <- 0.6
 { 
 ### physical violence ### 
   
-## unadjusted analyses ##
+# Define the different analyses and exposures
+analyses <- c("unadj", "adj", "best")
+exposures <- c("recent", "ever")
+
+# Define the corresponding variable names for each analysis
+var_names <- list(
+  unadj = list(est = "unadj_est_ln", var = "unadj_var_ln", lower = "un_lower_ln", upper = "un_upper_ln"),
+  adj = list(est = "adj_est_ln", var = "adj_var_ln", lower = "adj_lower_ln", upper = "adj_upper_ln"),
+  best = list(est = "effect_best_ln", var = "effect_best_var_ln", lower = "effect_best_lower_ln", upper = "effect_best_upper_ln")
+)
+
+# Define the corresponding dataframes for each exposure
+dataframes <- list(
+  recent = "fsw_data_pv_recent",
+  ever = "fsw_data_pv_ever"
+)
+
+# Define the corresponding plot filenames for each analysis and exposure
+plot_filenames <- list(
+  unadj = list(recent = "Plots/pv_recent_unadj_csc.png", ever = "Plots/pv_ever_unadj_csc.png"),
+  adj = list(recent = "Plots/pv_recent_adj_csc.png", ever = "Plots/pv_ever_adj_csc.png"),
+  best = list(recent = "Plots/pv_recent_best_csc.png", ever = "Plots/pv_ever_best_csc.png")
+)
+
+# Define the corresponding left columns and labels for each exposure
+leftcols <- list(
+  recent = leftcols_recent,
+  ever = leftcols_lifetime
+)
+leftlabs <- list(
+  recent = leftlabs_recent,
+  ever = leftlabs_lifetime
+)
+
+# Function to perform the analysis and create forest plots
+perform_analysis <- function(df, analysis, exposure) {
+  # Filter the dataframe
+  filtered_df <- df %>% filter(outcome == "HIV prevalence")
+  filtered_df <- filtered_df %>% filter(!is.na(filtered_df[[var_names[[analysis]]$est]]))
   
-{ 
-# recent exposure #
-    
-filtered_df <- fsw_data_pv_recent %>% filter(outcome == "HIV prevalence")
-filtered_df <- filtered_df %>% filter(unadj_est != "NA")
-    
-# create a covariance matrix assuming constant sampling correlation
-V_mat <- impute_covariance_matrix(filtered_df$unadj_var_ln,
-                                      cluster = filtered_df$study_num,
-                                      r = rho,
-                                      smooth_vi = TRUE)
-    
-# fit a multilevel random effects model using `rma.mv` from metafor
-result <- rma.mv(unadj_est_ln, 
-                            V = V_mat, 
-                            random = ~ 1 | study_num / effect_num,
-                            data = filtered_df,   
-                            sparse = TRUE)       
-    
-result 
-exp(coef(result))
-
-    
-result2 <- metagen(TE = unadj_est_ln,
-                       lower = un_lower_ln,
-                       upper = un_upper_ln,
-                       studlab = study,
-                       data = filtered_df,
-                       sm = "OR",
-                       method.tau = "REML",
-                       common = FALSE,
-                       random = TRUE, 
-                       backtransf = TRUE,
-                       text.random = "Overall")
-    
-print(summary(result2))
-    
-result2$TE.random <- result$b
-result2$lower.random <- result$ci.lb
-result2$upper.random <- result$ci.ub
-    
-filename <- paste0("Plots/pv_recent_unadj_csc.png")
-png(filename = filename, width = 38, height = 14, units = "cm", res = 600)
-    
-forest(result2,
-           sortvar = study,
-           xlim = c(0.2, 4),             
-           leftcols = leftcols_recent, 
-           leftlabs = leftlabs_recent,
-           rightcols = rightcols,
-           rightlabs = rightlabs,
-           pooled.totals = TRUE,
-           xintercept = 1,
-           addrow.overall = TRUE,
-           overall.hetstat = TRUE,
-           overall = TRUE,
-           labeltext = TRUE,
-           col.subgroup = "black")
-    
-dev.off()
-    
-# lifetime exposure #
-    
-filtered_df <- fsw_data_pv_ever %>% filter(outcome == "HIV prevalence")
-filtered_df <- filtered_df %>% filter(unadj_est != "NA")
-    
-# create a covariance matrix assuming constant sampling correlation
-V_mat <- impute_covariance_matrix(filtered_df$unadj_var_ln,
-                                  cluster = filtered_df$study_num,
-                                  r = rho,
-                                  smooth_vi = TRUE)
-
-# fit a multilevel random effects model using `rma.mv` from metafor
-result <- rma.mv(unadj_est_ln, 
-                 V = V_mat, 
-                 random = ~ 1 | study_num / effect_num,
-                 data = filtered_df,   
-                 sparse = TRUE)       
-
-result 
-exp(coef(result))
-    
-result2 <- metagen(TE = unadj_est_ln,
-                       lower = un_lower_ln,
-                       upper = un_upper_ln,
-                       studlab = study,
-                       data = filtered_df,
-                       sm = "OR",
-                       method.tau = "REML",
-                       common = FALSE,
-                       random = TRUE, 
-                       backtransf = TRUE,
-                       text.random = "Overall")
-    
-print(summary(result2))
-    
-result2$TE.random <- result$b
-result2$lower.random <- result$ci.lb
-result2$upper.random <- result$ci.ub
-    
-filename <- paste0("Plots/pv_ever_unadj_csc.png")
-    png(filename = filename, width = 35, height = 18, units = "cm", res = 600)
-    
-forest(result2,
-           sortvar = study,
-           xlim = c(0.2, 4),             
-           leftcols = leftcols_lifetime, 
-           leftlabs = leftlabs_lifetime,
-           rightcols = rightcols,
-           rightlabs = rightlabs,
-           pooled.totals = TRUE,
-           xintercept = 1,
-           addrow.overall = TRUE,
-           overall.hetstat = TRUE,
-           overall = TRUE,
-           labeltext = TRUE,
-           col.subgroup = "black")
-    
-dev.off()
-    
+  # Create a covariance matrix assuming constant sampling correlation
+  V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
+                                    cluster = filtered_df$study_num,
+                                    r = rho,
+                                    smooth_vi = TRUE)
+  
+  # Fit a multilevel random effects model using `rma.mv` from metafor
+  result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
+                   V = V_mat, 
+                   random = ~ 1 | study_num / effect_num,
+                   data = filtered_df,   
+                   sparse = TRUE)       
+  
+  print(result)
+  print(exp(coef(result)))
+  
+  result2 <- metagen(TE = filtered_df[[var_names[[analysis]]$est]],
+                     lower = filtered_df[[var_names[[analysis]]$lower]],
+                     upper = filtered_df[[var_names[[analysis]]$upper]],
+                     studlab = study,
+                     data = filtered_df,
+                     sm = "OR",
+                     method.tau = "REML",
+                     common = FALSE,
+                     random = TRUE, 
+                     backtransf = TRUE,
+                     text.random = "Overall")
+  
+  print(summary(result2))
+  
+  result2$TE.random <- result$b
+  result2$lower.random <- result$ci.lb
+  result2$upper.random <- result$ci.ub
+  
+  filename <- plot_filenames[[analysis]][[exposure]]
+  png(filename = filename, width = 38, height = 18, units = "cm", res = 600)
+  
+  forest(result2,
+         sortvar = study,
+         xlim = c(0.2, 4),             
+         leftcols = leftcols[[exposure]], 
+         leftlabs = leftlabs[[exposure]],
+         rightcols = rightcols,
+         rightlabs = rightlabs,
+         pooled.totals = TRUE,
+         xintercept = 1,
+         addrow.overall = TRUE,
+         overall.hetstat = TRUE,
+         overall = TRUE,
+         labeltext = TRUE,
+         col.subgroup = "black")
+  
+  dev.off()
 }
-  
-## adjusted analyses ##
-  
-{
-# recent exposure #
-    
-filtered_df <- fsw_data_pv_recent %>% filter(outcome == "HIV prevalence")
-filtered_df <- filtered_df %>% filter(adj_est != "NA")
-    
-# create a covariance matrix assuming constant sampling correlation
-V_mat <- impute_covariance_matrix(filtered_df$adj_var_ln,
-                                  cluster = filtered_df$study_num,
-                                  r = rho,
-                                  smooth_vi = TRUE)
-    
-# fit a multilevel random effects model using `rma.mv` from metafor
-result <- rma.mv(adj_est_ln, 
-                 V = V_mat, 
-                 random = ~ 1 | study_num / effect_num,
-                 data = filtered_df,   
-                 sparse = TRUE)       
-    
-result 
-exp(coef(result))
-    
-result2 <- metagen(TE = adj_est_ln,
-                   lower = adj_lower_ln,
-                   upper = adj_upper_ln,
-                   studlab = study,
-                   data = filtered_df,
-                   sm = "OR",
-                   method.tau = "REML",
-                   common = FALSE,
-                   random = TRUE, 
-                   backtransf = TRUE,
-                   text.random = "Overall")
-    
-print(summary(result2))
 
-result2$TE.random <- result$b
-result2$lower.random <- result$ci.lb
-result2$upper.random <- result$ci.ub
-    
-filename <- paste0("Plots/pv_recent_adj_csc.png")
-png(filename = filename, width = 38, height = 18, units = "cm", res = 600)
-    
-forest(result2,
-           sortvar = study,
-           xlim = c(0.2, 4),             
-           leftcols = leftcols_recent, 
-           leftlabs = leftlabs_recent,
-           rightcols = rightcols,
-           rightlabs = rightlabs,
-           xintercept = 1,
-           pooled.totals = TRUE,
-           addrow.overall = TRUE,
-           overall.hetstat = TRUE,
-           overall = TRUE,
-           labeltext = TRUE)
-    
-dev.off()
-  
-# lifetime exposure #
-    
-filtered_df <- fsw_data_pv_ever %>% filter(outcome == "HIV prevalence")
-filtered_df <- filtered_df %>% filter(adj_est != "NA")
-    
-# create a covariance matrix assuming constant sampling correlation
-V_mat <- impute_covariance_matrix(filtered_df$unadj_var_ln,
-                                  cluster = filtered_df$study_num,
-                                  r = rho,
-                                  smooth_vi = TRUE)
-
-# fit a multilevel random effects model using `rma.mv` from metafor
-result <- rma.mv(unadj_est_ln, 
-                 V = V_mat, 
-                 random = ~ 1 | study_num / effect_num,
-                 data = filtered_df,   
-                 sparse = TRUE)       
-
-result 
-exp(coef(result))
-    
-result2 <- metagen(TE = adj_est_ln,
-                   lower = adj_lower_ln,
-                   upper = adj_upper_ln,
-                   studlab = study,
-                   data = filtered_df,
-                   sm = "OR",
-                   method.tau = "REML",
-                   common = FALSE,
-                   random = TRUE, 
-                   backtransf = TRUE,
-                   text.random = "Overall")
-    
-print(summary(result2))
-    
-result2$TE.random <- result$b
-result2$lower.random <- result$ci.lb
-result2$upper.random <- result$ci.ub
-    
-filename <- paste0("Plots/pv_ever_adj_csc.png")
-png(filename = filename, width = 38, height = 18, units = "cm", res = 600)
-    
-forest(result2,
-           sortvar = study,
-           xlim = c(0.2, 4),             
-           leftcols = leftcols_lifetime, 
-           leftlabs = leftlabs_lifetime,
-           rightcols = rightcols,
-           rightlabs = rightlabs,
-           pooled.totals = TRUE,
-           xintercept = 1,
-           addrow.overall = TRUE,
-           overall.hetstat = TRUE,
-           overall = TRUE,
-           labeltext = TRUE,
-           col.subgroup = "black")
-    
-dev.off()
+# Loop over each analysis and exposure to perform the analysis and create forest plots
+for (analysis in analyses) {
+  for (exposure in exposures) {
+    df <- get(dataframes[[exposure]])
+    perform_analysis(df, analysis, exposure)
+  }
 }
-  
-## best analyses ##
-  
-{
-# recent exposure #
-    
-filtered_df <- fsw_data_pv_recent %>% filter(outcome == "HIV prevalence")
-filtered_df <- filtered_df %>% filter(effect_best != "NA")
-    
-# create a covariance matrix assuming constant sampling correlation
-V_mat <- impute_covariance_matrix(filtered_df$effect_best_var_ln,
-                                  cluster = filtered_df$study_num,
-                                  r = rho,
-                                  smooth_vi = TRUE)
 
-# fit a multilevel random effects model using `rma.mv` from metafor
-result <- rma.mv(effect_best_ln, 
-                 V = V_mat, 
-                 random = ~ 1 | study_num / effect_num,
-                 data = filtered_df,   
-                 sparse = TRUE)       
-    
-result 
-exp(coef(result))
-    
-result2 <- metagen(TE = effect_best_ln,
-                   lower = effect_best_lower_ln,
-                   upper = effect_best_upper_ln,
-                   studlab = study,
-                   data = filtered_df,
-                   sm = "OR",
-                   method.tau = "REML",
-                   common = FALSE,
-                   random = TRUE, 
-                   backtransf = TRUE,
-                   text.random = "Overall")
-    
-print(summary(result2))
-    
-result2$TE.random <- result$b
-result2$lower.random <- result$ci.lb
-result2$upper.random <- result$ci.ub
-    
-filename <- paste0("Plots/pv_recent_best_csc.png")
-png(filename = filename, width = 38, height = 18, units = "cm", res = 600)
-    
-forest(result2,
-           sortvar = study,
-           xlim = c(0.2, 4),             
-           leftcols = leftcols_recent, 
-           leftlabs = leftlabs_recent,
-           rightcols = rightcols,
-           rightlabs = rightlabs,
-           pooled.totals = TRUE,
-           xintercept = 1,
-           addrow.overall = TRUE,
-           overall.hetstat = TRUE,
-           overall = TRUE,
-           labeltext = TRUE,
-           col.subgroup = "black")
-    
-dev.off()
-    
-# lifetime exposure #
-    
-filtered_df <- fsw_data_pv_ever %>% filter(outcome == "HIV prevalence")
-filtered_df <- filtered_df %>% filter(effect_best != "NA")
-    
-# create a covariance matrix assuming constant sampling correlation
-V_mat <- impute_covariance_matrix(filtered_df$effect_best_var_ln,
-                                  cluster = filtered_df$study_num,
-                                  r = rho,
-                                  smooth_vi = TRUE)
 
-# fit a multilevel random effects model using `rma.mv` from metafor
-result <- rma.mv(effect_best_ln, 
-                 V = V_mat, 
-                 random = ~ 1 | study_num / effect_num,
-                 data = filtered_df,   
-                 sparse = TRUE)       
-    
-result 
-exp(coef(result))
-    
-result2 <- metagen(TE = effect_best_ln,
-                       lower = effect_best_lower_ln,
-                       upper = effect_best_upper_ln,
-                       studlab = study,
-                       data = filtered_df,
-                       sm = "OR",
-                       method.tau = "REML",
-                       common = FALSE,
-                       random = TRUE, 
-                       backtransf = TRUE,
-                       text.random = "Overall")
-    
-print(summary(result2))
-    
-result2$TE.random <- result$b
-result2$lower.random <- result$ci.lb
-result2$upper.random <- result$ci.ub
-    
-filename <- paste0("Plots/pv_ever_best_csc.png")
-png(filename = filename, width = 38, height = 18, units = "cm", res = 600)
-    
-forest(result2,
-           sortvar = study,
-           xlim = c(0.2, 4),             
-           leftcols = leftcols_lifetime, 
-           leftlabs = leftlabs_lifetime,
-           rightcols = rightcols,
-           rightlabs = rightlabs,
-           pooled.totals = TRUE,
-           xintercept = 1,
-           addrow.overall = TRUE,
-           overall.hetstat = TRUE,
-           overall = TRUE,
-           labeltext = TRUE,
-           col.subgroup = "black")
-    
-dev.off()
-}
-  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### sexual violence ###
   
 ## unadjusted analyses ##
@@ -1378,13 +1151,6 @@ for (dataframe_name in dataframe_names) {
   }
 }
 
-
-# Load necessary libraries
-library(readxl)
-library(tidyverse)
-library(metafor)
-library(clubSandwich)
-library(openxlsx)
 
 # Define rho (correlation coefficient)
 rho <- 0.6
