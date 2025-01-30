@@ -270,16 +270,6 @@ cat("Reference category for who_region:", who_region_levels[1], "\n")
 # Define rho (correlation coefficient)
 rho <- 0.6
 
-# Load necessary libraries
-library(readxl)
-library(tidyverse)
-library(metafor)
-library(clubSandwich)
-library(openxlsx)
-
-# Define rho (correlation coefficient)
-rho <- 0.6
-
 # List of subgroups and dataframes to loop over
 subgroup_vars <- c("ldc_bin", "pre_2016", "recruitment", "perpetrator", "who_region")
 dataframe_names <- c("fsw_data_pv_recent", "fsw_data_sv_recent", "fsw_data_psv_recent")
