@@ -1245,7 +1245,80 @@ dataframe_names <- c("fsw_data_pv_recent", "fsw_data_sv_recent", "fsw_data_psv_r
 # Define the columns for subgroup analysis
 subgroup_columns <- c("ldc_bin", "pre_2016", "recruitment", "perpetrator", "who_region")
 
-# testing hello world
+# Subgroup random effects model with constant sampling correlation working model
+
+# Create a covariance matrix assuming constant sampling correlation within subgroups
+V_subgroup <- impute_covariance_matrix(fsw_data_pv_recent$unadj_var_ln, 
+                                       cluster = fsw_data_pv_recent$study_num, 
+                                       r = rho,
+                                       smooth_vi = TRUE,
+                                       subgroup = fsw_data_pv_recent$ldc_bin)
+
+# Fit random effects working model in metafor
+subgroup_model <- rma.mv(unadj_est_ln ~ ldc_bin + pre_2016 + recruitment + perpetrator + who_region,
+                         V = V_subgroup, 
+                         random = list(~ ldc_bin | study_num), struct = "DIAG",
+                         data = fsw_data_pv_recent, sparse = TRUE)
+
+subgroup_model # Note that this reports model-based (not robust) standard errors
+
+# RVE standard errors
+CI_subgroup <- conf_int(subgroup_model, vcov = "CR2")
+CI_subgroup
+
+# Robust F-test
+Wald_subgroup <- Wald_test(subgroup_model, 
+                           constraints = constrain_equal(1:5), 
+                           vcov = "CR2")
+Wald_subgroup
+
+# Exponentiate the model estimates and CIs to convert them back to the original scale
+exp_estimates <- exp(subgroup_model$b)
+exp_CI_lower <- exp(subgroup_model$ci.lb)
+exp_CI_upper <- exp(subgroup_model$ci.ub)
+
+# Combine the results into a data frame for easier interpretation
+results <- data.frame(
+  Estimate = exp_estimates,
+  CI_Lower = exp_CI_lower,
+  CI_Upper = exp_CI_upper
+)
+
+print(results)
+
+# Ensure that the categorical variables are factors
+fsw_data_pv_recent$ldc_bin <- factor(fsw_data_pv_recent$ldc_bin)
+fsw_data_pv_recent$pre_2016 <- factor(fsw_data_pv_recent$pre_2016)
+fsw_data_pv_recent$recruitment <- factor(fsw_data_pv_recent$recruitment)
+fsw_data_pv_recent$perpetrator <- factor(fsw_data_pv_recent$perpetrator)
+fsw_data_pv_recent$who_region <- factor(fsw_data_pv_recent$who_region)
+
+# Check the levels of each factor variable
+ldc_bin_levels <- levels(fsw_data_pv_recent$ldc_bin)
+pre_2016_levels <- levels(fsw_data_pv_recent$pre_2016)
+recruitment_levels <- levels(fsw_data_pv_recent$recruitment)
+perpetrator_levels <- levels(fsw_data_pv_recent$perpetrator)
+who_region_levels <- levels(fsw_data_pv_recent$who_region)
+
+# Display the reference category for each factor variable
+cat("Reference category for ldc_bin:", ldc_bin_levels[1], "\n")
+cat("Reference category for pre_2016:", pre_2016_levels[1], "\n")
+cat("Reference category for recruitment:", recruitment_levels[1], "\n")
+cat("Reference category for perpetrator:", perpetrator_levels[1], "\n")
+cat("Reference category for who_region:", who_region_levels[1], "\n")
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # List to store results
 results_list <- list()
@@ -1363,4 +1436,3 @@ results_df <- do.call(rbind, all_results_list)
 fsw_data_pv_recent_results <- results_df[results_df$dataframe == "fsw_data_pv_recent", ]
 fsw_data_sv_recent_results <- results_df[results_df$dataframe == "fsw_data_sv_recent", ]
 fsw_data_psv_recent_results <- results_df[results_df$dataframe == "fsw_data_psv_recent", ]
-
