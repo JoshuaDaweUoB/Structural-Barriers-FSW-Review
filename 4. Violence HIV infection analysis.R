@@ -16,14 +16,17 @@ leftlabs_lifetime <- c("Study", "Exposure definition", "Perpetrator", "Country")
 rightcols <- c("effect", "ci")
 rightlabs = c("Estimate", "95% CI")
 
+# lists for loops and functions
+subgroup_columns <- c("ldc_bin", "pre_2016", "recruitment", "perpetrator", "who_region")
+dataframes <- list(fsw_data_pv_recent, fsw_data_sv_recent, fsw_data_psv_recent)
+dataframe_names <- c("fsw_data_pv_recent", "fsw_data_sv_recent", "fsw_data_psv_recent")
+analyses <- c("unadj", "adj", "best")
+exposures <- c("recent", "ever")
+
 #### multilevel random effects model with constant sampling correlation ####
 
 # constant sampling correlation
 rho <- 0.6
-
-# Define the different analyses and exposures
-analyses <- c("unadj", "adj", "best")
-exposures <- c("recent", "ever")
 
 # Define the corresponding variable names for each analysis
 var_names <- list(
@@ -198,14 +201,7 @@ rho <- 0.6
 
 ## recent violence
 
-# Define the columns for subgroup analysis
-subgroup_columns <- c("ldc_bin", "pre_2016", "recruitment", "perpetrator", "who_region")
-
 # Subgroup random effects model with constant sampling correlation working model
-
-# dataframes to loop over
-dataframes <- list(fsw_data_pv_recent, fsw_data_sv_recent, fsw_data_psv_recent)
-dataframe_names <- c("fsw_data_pv_recent", "fsw_data_sv_recent", "fsw_data_psv_recent")
 
 # covariance matrix assuming constant sampling correlation within subgroups
 V_subgroup <- impute_covariance_matrix(fsw_data_pv_recent$effect_best_var_ln, 
@@ -555,3 +551,63 @@ results_df <- do.call(rbind, all_results_list)
 fsw_data_pv_recent_results <- results_df[results_df$dataframe == "fsw_data_pv_recent", ]
 fsw_data_sv_recent_results <- results_df[results_df$dataframe == "fsw_data_sv_recent", ]
 fsw_data_psv_recent_results <- results_df[results_df$dataframe == "fsw_data_psv_recent", ]
+
+# Combine the three dataframes into one
+combined_results_df <- bind_rows(
+  fsw_data_pv_recent_results,
+  fsw_data_sv_recent_results,
+  fsw_data_psv_recent_results
+)
+
+# Function to create a forest plot
+forest_plot <- function(df, title) {
+  # Create a metagen object
+  meta_analysis <- metagen(
+    TE = df$pooled_OR,
+    lower = df$lower_CI,
+    upper = df$upper_CI,
+    studlab = df$level,
+    data = df,
+    sm = "OR",
+    method.tau = "REML",
+    common = FALSE,
+    random = FALSE,
+    backtransf = FALSE,
+    subgroup = df$column
+  )
+  
+  # Create the forest plot
+  forest(meta_analysis,
+         sortvar = df$level,
+         xlim = c(0.2, 4),
+         leftcols = c("studlab", "subgroup"),
+         leftlabs = c("Study", "Subgroup"),
+         rightcols = c("effect", "ci"),
+         rightlabs = c("Estimate", "95% CI"),
+         pooled.totals = FALSE,
+         addfit = FALSE,
+         xintercept = 1,
+         addrow.overall = FALSE,
+         overall.hetstat = FALSE,
+         overall = FALSE,
+         addrow.subgroups = FALSE,
+         labeltext = TRUE,
+         col.subgroup = "black",
+         print.subgroup.name = FALSE,         
+         main = title)
+}
+
+# Create forest plots for each dataframe
+png(filename = "Plots/fsw_data_pv_recent_forest_plot.png", width = 38, height = 25, units = "cm", res = 600)
+forest_plot(fsw_data_pv_recent_results, "FSW Data PV Recent Results")
+dev.off()
+
+png(filename = "Plots/fsw_data_sv_recent_forest_plot.png", width = 38, height = 25, units = "cm", res = 600)
+forest_plot(fsw_data_sv_recent_results, "FSW Data SV Recent Results")
+dev.off()
+
+png(filename = "Plots/fsw_data_psv_recent_forest_plot.png", width = 38, height = 25, units = "cm", res = 600)
+forest_plot(fsw_data_psv_recent_results, "FSW Data PSV Recent Results")
+dev.off()
+
+
