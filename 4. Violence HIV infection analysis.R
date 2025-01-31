@@ -194,11 +194,6 @@ create_forest_plot(summary_violence_recent, "effect_ln_2", "lower_ln_2", "upper_
 
 #### subgroup analyses
 
-# Define rho (correlation coefficient)
-rho <- 0.6
-
-#### subgroup analyses
-
 ## recent violence
 
 # List to store results
@@ -214,7 +209,7 @@ for (i in 1:length(dataframes)) {
   
   # Filter the dataframe for outcome = "HIV prevalence" and effect_best != "NA"
   filtered_df <- current_df %>% 
-    filter(outcome == "HIV prevalence") %>%
+    filter(outcome == "HIV prevalence") %>% 
     filter(effect_best != "NA")
   
   # Loop through each subgroup column
@@ -236,7 +231,9 @@ for (i in 1:length(dataframes)) {
           level = level,
           pooled_OR = exp(subgroup_df$effect_best_ln),
           lower_CI = exp(subgroup_df$effect_best_lower_ln),
-          upper_CI = exp(subgroup_df$effect_best_upper_ln)
+          upper_CI = exp(subgroup_df$effect_best_upper_ln),
+          estimates = nrow(subgroup_df),
+          studies = length(unique(subgroup_df$study_num))
         )
         next
       }
@@ -252,7 +249,7 @@ for (i in 1:length(dataframes)) {
                        V = V_mat, 
                        random = ~ 1 | study_num / effect_num,
                        data = subgroup_df,   
-                       control=list(rel.tol=1e-8),
+                       control = list(rel.tol = 1e-8),
                        sparse = TRUE)
       
       # Use `result` to update the `metagen` object
@@ -280,7 +277,9 @@ for (i in 1:length(dataframes)) {
         level = level,
         pooled_OR = exp(result$b),
         lower_CI = exp(result$ci.lb),
-        upper_CI = exp(result$ci.ub)
+        upper_CI = exp(result$ci.ub),
+        estimates = nrow(subgroup_df),
+        studies = length(unique(subgroup_df$study_num))
       )
       
       # Create a unique filename for the forest plot
