@@ -371,7 +371,7 @@ forest_plot <- function(df, title) {
          sortvar = df$level,
          xlim = c(0.2, 4),
          leftcols = c("studlab"),
-         leftlabs = c("Subgroup level"),
+         leftlabs = c("Subgroup"),
          rightcols = c("effect", "ci", "studies", "estimates"),
          rightlabs = c("Estimate", "95% CI", "Studies", "Estimates"),
          pooled.totals = FALSE,
