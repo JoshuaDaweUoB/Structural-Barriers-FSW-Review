@@ -17,9 +17,9 @@ rightcols <- c("effect", "ci")
 rightlabs = c("Estimate", "95% CI")
 
 # lists for loops and functions
-subgroup_columns <- c("ldc_bin", "pre_2016", "recruitment", "perpetrator", "who_region")
-dataframes <- list(fsw_data_pv_recent, fsw_data_sv_recent, fsw_data_psv_recent)
-dataframe_names <- c("fsw_data_pv_recent", "fsw_data_sv_recent", "fsw_data_psv_recent")
+subgroup_columns <- c("ldc_bin", "lmic_bin", "hiv_decrim", "gbv_law", "pre_2016", "recruitment", "perpetrator", "who_region", "rob_score")
+dataframes <- list(fsw_data_pv_recent, fsw_data_sv_recent, fsw_data_psv_recent, fsw_data_pv_ever, fsw_data_sv_ever, fsw_data_psv_ever)  
+dataframe_names <- c("fsw_data_pv_recent", "fsw_data_sv_recent", "fsw_data_psv_recent", "fsw_data_pv_ever", "fsw_data_sv_ever", "fsw_data_psv_ever")
 analyses <- c("unadj", "adj", "best")
 exposures <- c("recent", "ever")
 
@@ -192,9 +192,7 @@ summary_violence_recent <- read_excel("Violence estimates.xlsx", "HIV infection 
 create_forest_plot(summary_violence_ever, "effect_ln_2", "lower_ln_2", "upper_ln_2", "name", "Adjust", "Plots/overall plots/violence_ever_overall.png")
 create_forest_plot(summary_violence_recent, "effect_ln_2", "lower_ln_2", "upper_ln_2", "name", "Adjust", "Plots/overall plots/violence_recent_overall.png")
 
-#### subgroup analyses
-
-## recent violence
+#### subgroup analyses ####
 
 # List to store results
 results_list <- list()
@@ -324,9 +322,13 @@ results_df <- results_df %>%
 results_df <- results_df %>%
     mutate(column = recode(column,
                            ldc_bin = "Least developed country",
+                           lmic_bin = "Lower-middle income country",
+                           hiv_decrim = "HIV decriminalisation",
+                           gbv_law = "Gender-based violence laws",
                            pre_2016 = "Published before 2016",
                            recruitment = "Recruitment strategy",
                            who_region = "WHO region",
+                           rob_score = "Risk of bias score",
                            perpetrator = "Perpetrator"))
 
 # Recode the values in the column variable
@@ -334,20 +336,27 @@ results_df <- results_df %>%
     mutate(level = recode(level,
                            no = "No",
                            yes = "Yes",
+                           partial = "Partial",
                            "FALSE" = "No",
-                           "TRUE" = "Yes"))                           
+                           "TRUE" = "Yes"))
 
 # Split the results_df into three dataframes
 fsw_data_pv_recent_results <- results_df[results_df$dataframe == "fsw_data_pv_recent", ]
 fsw_data_sv_recent_results <- results_df[results_df$dataframe == "fsw_data_sv_recent", ]
 fsw_data_psv_recent_results <- results_df[results_df$dataframe == "fsw_data_psv_recent", ]
+fsw_data_pv_ever_results <- results_df[results_df$dataframe == "fsw_data_pv_ever", ]
+fsw_data_sv_ever_results <- results_df[results_df$dataframe == "fsw_data_sv_ever", ]
+fsw_data_psv_ever_results <- results_df[results_df$dataframe == "fsw_data_psv_ever", ]
 
 # Combine the three dataframes into one
 combined_results_df <- bind_rows(
   fsw_data_pv_recent_results,
   fsw_data_sv_recent_results,
-  fsw_data_psv_recent_results
-)
+  fsw_data_psv_recent_results,
+  fsw_data_pv_ever_results,
+  fsw_data_sv_ever_results,
+  fsw_data_psv_ever_results
+  )
 
 # Function to create a forest plot
 forest_plot <- function(df, title) {
@@ -388,16 +397,28 @@ forest_plot <- function(df, title) {
 }
 
 # Create forest plots for each dataframe
-png(filename = "Plots/fsw_data_pv_recent_forest_plot.png", width = 25, height = 18, units = "cm", res = 600)
+png(filename = "Plots/fsw_data_pv_recent_forest_plot.png", width = 25, height = 25, units = "cm", res = 600)
 forest_plot(fsw_data_pv_recent_results, "FSW Data PV Recent Results")
 dev.off()
 
-png(filename = "Plots/fsw_data_sv_recent_forest_plot.png", width = 25, height = 18, units = "cm", res = 600)
+png(filename = "Plots/fsw_data_sv_recent_forest_plot.png", width = 25, height = 25, units = "cm", res = 600)
 forest_plot(fsw_data_sv_recent_results, "FSW Data SV Recent Results")
 dev.off()
 
-png(filename = "Plots/fsw_data_psv_recent_forest_plot.png", width = 25, height = 18, units = "cm", res = 600)
+png(filename = "Plots/fsw_data_psv_recent_forest_plot.png", width = 25, height = 25, units = "cm", res = 600)
 forest_plot(fsw_data_psv_recent_results, "FSW Data PSV Recent Results")
+dev.off()
+
+png(filename = "Plots/fsw_data_pv_ever_forest_plot.png", width = 25, height = 25, units = "cm", res = 600)
+forest_plot(fsw_data_pv_ever_results, "FSW Data PV Ever Results")
+dev.off()
+
+png(filename = "Plots/fsw_data_sv_ever_forest_plot.png", width = 25, height = 25, units = "cm", res = 600)
+forest_plot(fsw_data_sv_ever_results, "FSW Data SV Ever Results")
+dev.off()
+
+png(filename = "Plots/fsw_data_psv_ever_forest_plot.png", width = 25, height = 25, units = "cm", res = 600)
+forest_plot(fsw_data_psv_ever_results, "FSW Data PSV Ever Results")
 dev.off()
 
 
