@@ -231,7 +231,8 @@ for (i in 1:length(dataframes)) {
           lower_CI = exp(subgroup_df$effect_best_lower_ln),
           upper_CI = exp(subgroup_df$effect_best_upper_ln),
           estimates = nrow(subgroup_df),
-          studies = length(unique(subgroup_df$study_num))
+          studies = length(unique(subgroup_df$study_num)),
+          I2 = "NA"
         )
         next
       }
@@ -249,6 +250,11 @@ for (i in 1:length(dataframes)) {
                        data = subgroup_df,   
                        control = list(rel.tol = 1e-8),
                        sparse = TRUE)
+      
+      # Calculate I2 statistic
+      Q <- result$QE
+      df <- result$k - 1
+      I2 <- round(max(0, min(100 * (Q - df) / Q, 100)), 1)
       
       # Use `result` to update the `metagen` object
       result2 <- metagen(TE = subgroup_df$effect_best_ln,
@@ -277,7 +283,8 @@ for (i in 1:length(dataframes)) {
         lower_CI = exp(result$ci.lb),
         upper_CI = exp(result$ci.ub),
         estimates = nrow(subgroup_df),
-        studies = length(unique(subgroup_df$study_num))
+        studies = length(unique(subgroup_df$study_num)),
+        I2 = I2
       )
       
       # Create a unique filename for the forest plot
@@ -310,7 +317,7 @@ all_results_list <- c(results_list, skipped_results_list)
 # Convert the combined results list to a dataframe
 results_df <- do.call(rbind, all_results_list)
 
-# transform ORs and CIs to log scale
+# Transform ORs and CIs to log scale
 results_df <- results_df %>%
     mutate(
       pooled_OR = log(pooled_OR),
@@ -331,7 +338,7 @@ results_df <- results_df %>%
                            rob_score = "Risk of bias score",
                            perpetrator = "Perpetrator"))
 
-# Recode the values in the column variable
+# Recode the values in the level variable
 results_df <- results_df %>%
     mutate(level = recode(level,
                            no = "No",
@@ -381,8 +388,8 @@ forest_plot <- function(df, title) {
          xlim = c(0.2, 4),
          leftcols = c("studlab"),
          leftlabs = c("Subgroup"),
-         rightcols = c("effect", "ci", "studies", "estimates"),
-         rightlabs = c("Estimate", "95% CI", "Studies", "Estimates"),
+         rightcols = c("effect", "ci", "I2" ,"studies", "estimates"),
+         rightlabs = c("Estimate", "95% CI", "I²" ,"Studies", "Estimates"),
          pooled.totals = FALSE,
          addfit = FALSE,
          xintercept = 1,

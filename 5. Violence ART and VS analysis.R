@@ -1,491 +1,449 @@
 # load packages 
-pacman::p_load("meta", "metafor", "readxl", "tidyverse") 
+pacman::p_load("meta", "metafor", "readxl", "tidyverse", "kableExtra", "robumeta", "clubSandwich") 
+
+# set working directory
+setwd("C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence")
 
 # settings
 settings.meta(CIbracket = "(") 
 settings.meta(CIseparator = "-") 
 
-# forest plot for unadjusted ART estimates
-# ART and VS dataframes
-dfs_art_vs <- c("fsw_data_art_pool", "fsw_data_vs_pool")
+# columns
+leftcols_recent <- c("study", "exposure_definition_short", "exposure_time_frame", "perpetrator", "country")
+leftlabs_recent <- c("Study", "Exposure definition", "Exposure time frame", "Perpetrator", "Country")
+leftcols_lifetime <- c("study", "exposure_definition_short", "perpetrator", "country")
+leftlabs_lifetime <- c("Study", "Exposure definition", "Perpetrator", "Country")
+rightcols <- c("outcome", "effect", "ci")
+rightlabs = c("Outcome", "Estimate", "95% CI")
 
-# unadjusted recent
-for (var in dfs_art_vs) {
-  df <- get(var)
-  meta_analysis_art_vs_unadj_rec(df, var)
-}
+#### multilevel random effects model with constant sampling correlation ####
 
-# adjusted recent
-for (var in dfs_art_vs) {
-  df <- get(var)
-  meta_analysis_art_vs_adj_rec(df, var)
-}
+# constant sampling correlation
+rho <- 0.6
 
-# best recent
-for (var in dfs_art_vs) {
-  df <- get(var)
-  meta_analysis_art_vs_best_rec(df, var)
-}
+### recent violence (all types) ###
 
-# unadjusted ever
-for (var in dfs_art_vs) {
-  df <- get(var)
-  meta_analysis_art_vs_unadj_ever(df, var)
-}
+## unadjusted analyses ##
 
-# adjusted ever
-for (var in dfs_art_vs) {
-  df <- get(var)
-  meta_analysis_art_vs_adj_ever(df, var)
-}
-
-# best ever
-for (var in dfs_art_vs) {
-  df <- get(var)
-  meta_analysis_art_vs_best_ever(df, var)
-}
-
-
-
-
-
-
-
-
-
-
-
-# Unused ------------------------------------------------------------------
-
-filtered_df <- fsw_data_art %>% 
-  filter(una_effect != "NR")
-
-art_unadj <- metagen(TE = unadj_est_ln,
+{ 
+  
+  filtered_df <- fsw_data_art %>% filter(exposure_tf_bin == "Recent")
+  filtered_df <- filtered_df %>% filter(unadj_est != "NA")
+  
+  # create a covariance matrix assuming constant sampling correlation
+  V_mat <- impute_covariance_matrix(filtered_df$unadj_var_ln,
+                                    cluster = filtered_df$study_num,
+                                    r = rho,
+                                    smooth_vi = TRUE)
+  
+  # fit a multilevel random effects model using `rma.mv` from metafor
+  result <- rma.mv(unadj_est_ln, 
+                   V = V_mat, 
+                   random = ~ 1 | study_num / effect_num,
+                   data = filtered_df,   
+                   sparse = TRUE)       
+  
+  result 
+  exp(coef(result))
+  
+  result2 <- metagen(TE = unadj_est_ln,
                      lower = un_lower_ln,
                      upper = un_upper_ln,
                      studlab = study,
                      data = filtered_df,
                      sm = "OR",
-                     method.tau = "DL",
-                     comb.fixed = FALSE,
-                     comb.random = FALSE, 
+                     method.tau = "REML",
+                     common = FALSE,
+                     random = TRUE, 
                      backtransf = TRUE,
-                     byvar = outcome,
                      text.random = "Overall")
+  
+  print(summary(result2))
+  
+  result2$TE.random <- result$b
+  result2$lower.random <- result$ci.lb
+  result2$upper.random <- result$ci.ub
+  
+  filename <- paste0("Plots/recent_unadj_art.png")
+  png(filename = filename, width = 38, height = 18, units = "cm", res = 600)
+  
+  forest(result2,
+         sortvar = study,
+         xlim = c(0.2, 4),             
+         leftcols = leftcols_recent, 
+         leftlabs = leftlabs_recent,
+         rightcols = rightcols,
+         rightlabs = rightlabs,
+         pooled.totals = TRUE,
+         xintercept = 1,
+         addrow.overall = TRUE,
+         overall.hetstat = TRUE,
+         overall = TRUE,
+         labeltext = TRUE,
+         col.subgroup = "black")
+  
+  dev.off()  
+  
+}  
 
-# Print summary
-print(summary(art_unadj)) 
+## adjusted analyses ##
 
-# Create PNG for forest plot
-png(filename = "C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence/Plots/art_unadj_0511.png", width = 45, height = 28, units = "cm", res = 600)
+{ 
+  filtered_df <- fsw_data_art %>% filter(exposure_tf_bin == "Recent")
+  filtered_df <- filtered_df %>% filter(adj_est != "NA")
+  
+  # create a covariance matrix assuming constant sampling correlation
+  V_mat <- impute_covariance_matrix(filtered_df$adj_var_ln,
+                                    cluster = filtered_df$study_num,
+                                    r = rho,
+                                    smooth_vi = TRUE)
+  
+  # fit a multilevel random effects model using `rma.mv` from metafor
+  result <- rma.mv(adj_est_ln, 
+                   V = V_mat, 
+                   random = ~ 1 | study_num / effect_num,
+                   data = filtered_df,   
+                   sparse = TRUE)       
+  
+  result 
+  exp(coef(result))
+  
+  
+  result2 <- metagen(TE = adj_est_ln,
+                     lower = adj_lower_ln,
+                     upper = adj_upper_ln,
+                     studlab = study,
+                     data = filtered_df,
+                     sm = "OR",
+                     method.tau = "REML",
+                     common = FALSE,
+                     random = TRUE, 
+                     backtransf = TRUE,
+                     text.random = "Overall")
+  
+  print(summary(result2))
+  
+  result2$TE.random <- result$b
+  result2$lower.random <- result$ci.lb
+  result2$upper.random <- result$ci.ub
+  
+  filename <- paste0("Plots/recent_adj_art.png")
+  png(filename = filename, width = 38, height = 16, units = "cm", res = 600)
+  
+  forest(result2,
+         sortvar = study,
+         xlim = c(0.2, 4),             
+         leftcols = leftcols_recent, 
+         leftlabs = leftlabs_recent,
+         rightcols = rightcols,
+         rightlabs = rightlabs,
+         pooled.totals = TRUE,
+         xintercept = 1,
+         addrow.overall = TRUE,
+         overall.hetstat = TRUE,
+         overall = TRUE,
+         labeltext = TRUE,
+         col.subgroup = "black")
+  
+  dev.off()  
+  
+}  
 
-# Generate forest plot
-forest(art_unadj, 
-            sortvar = TE,
-            xlim = c(0.2, 4),             
-            leftcols = c("study", "exposure_definition_short", "exposed_perc_string", "exposure_time_frame"), 
-            leftlabs = c("Study", "Exposure definition", "Exposed (%)", "Time frame"),
-            rightcols = c("unadj_or_95_2" , "who_region", "perpetrator"), 
-            rightlabs = c("OR (95% CI)","WHO region", "Perpetrator"), 
-            pooled.totals = FALSE,
-            xintercept = 1,
-            addrow.overall = TRUE,
-            test.subgroup = FALSE,
-            overall.hetstat = FALSE,
-            overall = FALSE,
-            labeltext = TRUE,
-            col.subgroup = "black",
-            print.subgroup.name = F)
+## best analyses ## 
 
-# Close the PNG device
-dev.off()
+{ 
+  filtered_df <- fsw_data_art %>% filter(exposure_tf_bin == "Recent")
+  filtered_df <- filtered_df %>% filter(effect_best != "NA")
+  
+  # create a covariance matrix assuming constant sampling correlation
+  V_mat <- impute_covariance_matrix(filtered_df$effect_best_var_ln,
+                                    cluster = filtered_df$study_num,
+                                    r = rho,
+                                    smooth_vi = TRUE)
+  
+  # fit a multilevel random effects model using `rma.mv` from metafor
+  result <- rma.mv(effect_best_ln, 
+                   V = V_mat, 
+                   random = ~ 1 | study_num / effect_num,
+                   data = filtered_df,   
+                   sparse = TRUE)       
+  
+  result 
+  exp(coef(result))
+  
+  
+  result2 <- metagen(TE = effect_best_ln,
+                     lower = effect_best_lower_ln,
+                     upper = effect_best_upper_ln,
+                     studlab = study,
+                     data = filtered_df,
+                     sm = "OR",
+                     method.tau = "REML",
+                     common = FALSE,
+                     random = TRUE, 
+                     backtransf = TRUE,
+                     text.random = "Overall")
+  
+  print(summary(result2))
+  
+  result2$TE.random <- result$b
+  result2$lower.random <- result$ci.lb
+  result2$upper.random <- result$ci.ub
+  
+  filename <- paste0("Plots/recent_best_art.png")
+  png(filename = filename, width = 38, height = 18, units = "cm", res = 600)
+  
+  forest(result2,
+         sortvar = study,
+         xlim = c(0.2, 4),             
+         leftcols = leftcols_recent, 
+         leftlabs = leftlabs_recent,
+         rightcols = rightcols,
+         rightlabs = rightlabs,
+         pooled.totals = TRUE,
+         xintercept = 1,
+         addrow.overall = TRUE,
+         overall.hetstat = TRUE,
+         overall = TRUE,
+         labeltext = TRUE,
+         col.subgroup = "black")
+  
+  dev.off()  
+  
+}  
 
-# forest plot for adjusted ART estimates
+### lifetime violence (all types) ###
 
-filtered_df <- fsw_data_art %>% 
-  filter(adj_effect != "NR")
+## unadjusted analyses ##
 
-art_adj <- metagen(TE = adj_est_ln,
-                   lower = adj_lower_ln,
-                   upper = adj_upper_ln,
-                   studlab = study,
-                   data = filtered_df,
-                   sm = "OR",
-                   method.tau = "DL",
-                   comb.fixed = FALSE,
-                   comb.random = FALSE, 
-                   backtransf = TRUE,
-                   byvar = outcome,
-                   text.random = "Overall")
-
-# Print summary
-print(summary(art_adj)) 
-
-# Create PNG for forest plot
-png(filename = "C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence/Plots/art_adj.png", width = 45, height = 28, units = "cm", res = 600)
-
-# Generate forest plot
-forest.meta(art_adj, 
-            sortvar = TE,
-            xlim = c(0.2, 4),             
-            leftcols = c("study", "exposure_definition_short", "exposed_perc_string", "exposure_time_frame"), 
-            leftlabs = c("Study", "Exposure definition", "Exposed (%)", "Time frame"),
-            rightcols = c("or_95_2" , "who_region", "perpetrator"), 
-            rightlabs = c("OR (95% CI)","WHO region", "Perpetrator"), 
-            pooled.totals = FALSE,
-            xintercept = 1,
-            addrow.overall = TRUE,
-            test.subgroup = FALSE,
-            overall.hetstat = FALSE,
-            overall = FALSE,
-            labeltext = TRUE,
-            col.subgroup = "black",
-            print.subgroup.name = F)
-
-# Close the PNG device
-dev.off()
-
-
-# forest plot for combined ART estimates
-
-art_best <- metagen(TE = effect_best_ln,
-                    lower = effect_best_lower_ln,
-                    upper = effect_best_upper_ln,
-                    studlab = study,
-                    data = fsw_data_art,
-                    sm = "OR",
-                    method.tau = "DL",
-                    comb.fixed = FALSE,
-                    comb.random = FALSE, 
-                    backtransf = TRUE,
-                    byvar = outcome,
-                    text.random = "Overall")
-
-# Print summary
-print(summary(art_best)) 
-
-# Create PNG for forest plot
-png(filename = "C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence/Plots/art_best.png", width = 45, height = 28, units = "cm", res = 600)
-
-# Generate forest plot
-forest.meta(art_best, 
-            sortvar = TE,
-            xlim = c(0.2, 4),             
-            leftcols = c("study", "exposure_definition_short", "exposed_perc_string", "exposure_time_frame"), 
-            leftlabs = c("Study", "Exposure definition", "Exposed (%)", "Time frame"),
-            rightcols = c("or_95_2" , "who_region", "perpetrator"), 
-            rightlabs = c("OR (95% CI)","WHO region", "Perpetrator"), 
-            pooled.totals = FALSE,
-            xintercept = 1,
-            addrow.overall = TRUE,
-            test.subgroup = FALSE,
-            overall.hetstat = FALSE,
-            overall = FALSE,
-            labeltext = TRUE,
-            col.subgroup = "black",
-            print.subgroup.name = F)
-
-# Close the PNG device
-dev.off()
-
-# forest plot for unadjusted ART estimates
-
-filtered_df <- fsw_data_art %>% 
-  filter(una_effect != "NR")
-
-art_unadj <- metagen(TE = unadj_est_ln,
+{ 
+  
+  filtered_df <- fsw_data_art %>% filter(exposure_tf_bin == "Ever")
+  filtered_df <- filtered_df %>% filter(unadj_est != "NA")
+  
+  # create a covariance matrix assuming constant sampling correlation
+  V_mat <- impute_covariance_matrix(filtered_df$unadj_var_ln,
+                                    cluster = filtered_df$study_num,
+                                    r = rho,
+                                    smooth_vi = TRUE)
+  
+  # fit a multilevel random effects model using `rma.mv` from metafor
+  result <- rma.mv(unadj_est_ln, 
+                   V = V_mat, 
+                   random = ~ 1 | study_num / effect_num,
+                   data = filtered_df,   
+                   sparse = TRUE)       
+  
+  result 
+  exp(coef(result))
+  
+  
+  result2 <- metagen(TE = unadj_est_ln,
                      lower = un_lower_ln,
                      upper = un_upper_ln,
                      studlab = study,
                      data = filtered_df,
                      sm = "OR",
-                     method.tau = "DL",
-                     comb.fixed = FALSE,
-                     comb.random = FALSE, 
+                     method.tau = "REML",
+                     common = FALSE,
+                     random = TRUE, 
                      backtransf = TRUE,
-                     byvar = outcome,
                      text.random = "Overall")
+  
+  print(summary(result2))
+  
+  result2$TE.random <- result$b
+  result2$lower.random <- result$ci.lb
+  result2$upper.random <- result$ci.ub
+  
+  filename <- paste0("Plots/ever_unadj_art.png")
+  png(filename = filename, width = 38, height = 14, units = "cm", res = 600)
+  
+  forest(result2,
+         sortvar = study,
+         xlim = c(0.2, 4),             
+         leftcols = leftcols_recent, 
+         leftlabs = leftlabs_recent,
+         rightcols = rightcols,
+         rightlabs = rightlabs,
+         pooled.totals = TRUE,
+         xintercept = 1,
+         addrow.overall = TRUE,
+         overall.hetstat = TRUE,
+         overall = TRUE,
+         labeltext = TRUE,
+         col.subgroup = "black")
+  
+  dev.off()  
+  
+}  
 
-# Print summary
-print(summary(art_unadj)) 
+## adjusted analyses ##
 
-# Create PNG for forest plot
-png(filename = "C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence/Plots/art_unadj.png", width = 45, height = 28, units = "cm", res = 600)
+{ 
+  filtered_df <- fsw_data_art %>% filter(exposure_tf_bin == "Ever")
+  filtered_df <- filtered_df %>% filter(adj_est != "NA")
+  
+  # create a covariance matrix assuming constant sampling correlation
+  V_mat <- impute_covariance_matrix(filtered_df$adj_var_ln,
+                                    cluster = filtered_df$study_num,
+                                    r = rho,
+                                    smooth_vi = TRUE)
+  
+  # fit a multilevel random effects model using `rma.mv` from metafor
+  result <- rma.mv(adj_est_ln, 
+                   V = V_mat, 
+                   random = ~ 1 | study_num / effect_num,
+                   data = filtered_df,   
+                   sparse = TRUE)       
+  
+  result 
+  exp(coef(result))
+  
+  
+  result2 <- metagen(TE = adj_est_ln,
+                     lower = adj_lower_ln,
+                     upper = adj_upper_ln,
+                     studlab = study,
+                     data = filtered_df,
+                     sm = "OR",
+                     method.tau = "REML",
+                     common = FALSE,
+                     random = TRUE, 
+                     backtransf = TRUE,
+                     text.random = "Overall")
+  
+  print(summary(result2))
+  
+  result2$TE.random <- result$b
+  result2$lower.random <- result$ci.lb
+  result2$upper.random <- result$ci.ub
+  
+  filename <- paste0("Plots/ever_adj_art.png")
+  png(filename = filename, width = 38, height = 14, units = "cm", res = 600)
+  
+  forest(result2,
+         sortvar = study,
+         xlim = c(0.2, 4),             
+         leftcols = leftcols_recent, 
+         leftlabs = leftlabs_recent,
+         rightcols = rightcols,
+         rightlabs = rightlabs,
+         pooled.totals = TRUE,
+         xintercept = 1,
+         addrow.overall = TRUE,
+         overall.hetstat = TRUE,
+         overall = TRUE,
+         labeltext = TRUE,
+         col.subgroup = "black")
+  
+  dev.off()  
+  
+}  
 
-# Generate forest plot
-forest.meta(art_unadj, 
-            sortvar = TE,
-            xlim = c(0.2, 4),             
-            leftcols = c("study", "exposure_definition_short", "exposed_perc_string", "exposure_time_frame"), 
-            leftlabs = c("Study", "Exposure definition", "Exposed (%)", "Time frame"),
-            rightcols = c("or_95_2" , "who_region", "perpetrator"), 
-            rightlabs = c("OR (95% CI)","WHO region", "Perpetrator"), 
-            pooled.totals = FALSE,
-            xintercept = 1,
-            addrow.overall = TRUE,
-            test.subgroup = FALSE,
-            overall.hetstat = FALSE,
-            overall = FALSE,
-            labeltext = TRUE,
-            col.subgroup = "black",
-            print.subgroup.name = F)
+## best analyses ## 
 
-# Close the PNG device
+{ 
+  filtered_df <- fsw_data_art %>% filter(exposure_tf_bin == "Ever")
+  filtered_df <- filtered_df %>% filter(effect_best != "NA")
+  
+  # create a covariance matrix assuming constant sampling correlation
+  V_mat <- impute_covariance_matrix(filtered_df$effect_best_var_ln,
+                                    cluster = filtered_df$study_num,
+                                    r = rho,
+                                    smooth_vi = TRUE)
+  
+  # fit a multilevel random effects model using `rma.mv` from metafor
+  result <- rma.mv(effect_best_ln, 
+                   V = V_mat, 
+                   random = ~ 1 | study_num / effect_num,
+                   data = filtered_df,   
+                   sparse = TRUE)       
+  
+  result 
+  exp(coef(result))
+  
+  
+  result2 <- metagen(TE = effect_best_ln,
+                     lower = effect_best_lower_ln,
+                     upper = effect_best_upper_ln,
+                     studlab = study,
+                     data = filtered_df,
+                     sm = "OR",
+                     method.tau = "REML",
+                     common = FALSE,
+                     random = TRUE, 
+                     backtransf = TRUE,
+                     text.random = "Overall")
+  
+  print(summary(result2))
+  
+  result2$TE.random <- result$b
+  result2$lower.random <- result$ci.lb
+  result2$upper.random <- result$ci.ub
+  
+  filename <- paste0("Plots/ever_best_art.png")
+  png(filename = filename, width = 38, height = 14, units = "cm", res = 600)
+  
+  forest(result2,
+         sortvar = study,
+         xlim = c(0.2, 4),             
+         leftcols = leftcols_recent, 
+         leftlabs = leftlabs_recent,
+         rightcols = rightcols,
+         rightlabs = rightlabs,
+         pooled.totals = TRUE,
+         xintercept = 1,
+         addrow.overall = TRUE,
+         overall.hetstat = TRUE,
+         overall = TRUE,
+         labeltext = TRUE,
+         col.subgroup = "black")
+  
+  dev.off()  
+  
+}  
+
+#### overall forest plot ####
+
+## load dataframe
+
+summary_violence_art <- read_excel("Violence estimates.xlsx", "ART") 
+
+## forest plot
+
+summary_hiv_violence_art  <- metagen(TE = effect_ln,
+                                      lower = lower_ln,
+                                      upper = upper_ln,
+                                      studlab = name,
+                                      data = summary_violence_art,
+                                      sm = "OR",
+                                      method.tau = "DL",
+                                      comb.fixed = FALSE,
+                                      comb.random = FALSE, 
+                                      backtransf = TRUE,
+                                      byvar = name,
+                                      text.random = "Overall")
+
+summary(summary_hiv_violence_art) 
+
+filename <- paste0("Plots/overall plots/violence_art_overall.png")
+png(filename = filename, width = 25, height = 14, units = "cm", res = 600)
+
+summary_hiv_violence_art <- forest(summary_hiv_violence_art, 
+                                    sortvar = name,
+                                    xlim=c(0.2, 4),             
+                                    leftcols = c("adjust", "studies", "estimates"), 
+                                    leftlabs = c("Model type", "Studies", "Estimates"),
+                                    rightcols = c("or_95", "i2"), 
+                                    rightlabs = c("OR (95% CI)", "I²"), 
+                                    pooled.totals = F,
+                                    xintercept=1,
+                                    addrow.overall = T,
+                                    test.subgroup = F,
+                                    overall.hetstat = F,
+                                    overall = F,
+                                    labeltext = TRUE,
+                                    col.subgroup = "black",
+                                    print.subgroup.name = FALSE) 
 dev.off()
-
-# forest plot for adjusted ART estimates
-
-filtered_df <- fsw_data_art %>% 
-  filter(adj_effect != "NR")
-
-art_adj <- metagen(TE = adj_est_ln,
-                   lower = adj_lower_ln,
-                   upper = adj_upper_ln,
-                   studlab = study,
-                   data = filtered_df,
-                   sm = "OR",
-                   method.tau = "DL",
-                   comb.fixed = FALSE,
-                   comb.random = FALSE, 
-                   backtransf = TRUE,
-                   byvar = outcome,
-                   text.random = "Overall")
-
-# Print summary
-print(summary(art_adj)) 
-
-# Create PNG for forest plot
-png(filename = "C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence/Plots/art_adj.png", width = 45, height = 28, units = "cm", res = 600)
-
-# Generate forest plot
-forest.meta(art_adj, 
-            sortvar = TE,
-            xlim = c(0.2, 4),             
-            leftcols = c("study", "exposure_definition_short", "exposed_perc_string", "exposure_time_frame"), 
-            leftlabs = c("Study", "Exposure definition", "Exposed (%)", "Time frame"),
-            rightcols = c("or_95_2" , "who_region", "perpetrator"), 
-            rightlabs = c("OR (95% CI)","WHO region", "Perpetrator"), 
-            pooled.totals = FALSE,
-            xintercept = 1,
-            addrow.overall = TRUE,
-            test.subgroup = FALSE,
-            overall.hetstat = FALSE,
-            overall = FALSE,
-            labeltext = TRUE,
-            col.subgroup = "black",
-            print.subgroup.name = F)
-
-# Close the PNG device
-dev.off()
-
-
-# forest plot for combined ART estimates
-
-art_best <- metagen(TE = effect_best_ln,
-                    lower = effect_best_lower_ln,
-                    upper = effect_best_upper_ln,
-                    studlab = study,
-                    data = fsw_data_art,
-                    sm = "OR",
-                    method.tau = "DL",
-                    comb.fixed = FALSE,
-                    comb.random = FALSE, 
-                    backtransf = TRUE,
-                    byvar = outcome,
-                    text.random = "Overall")
-
-# Print summary
-print(summary(art_best)) 
-
-# Create PNG for forest plot
-png(filename = "C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence/Plots/art_adj.png", width = 45, height = 28, units = "cm", res = 600)
-
-# Generate forest plot
-forest.meta(art_adj, 
-            sortvar = TE,
-            xlim = c(0.2, 4),             
-            leftcols = c("study", "exposure_definition_short", "exposed_perc_string", "exposure_time_frame"), 
-            leftlabs = c("Study", "Exposure definition", "Exposed (%)", "Time frame"),
-            rightcols = c("or_95_2" , "who_region", "perpetrator"), 
-            rightlabs = c("OR (95% CI)","WHO region", "Perpetrator"), 
-            pooled.totals = FALSE,
-            xintercept = 1,
-            addrow.overall = TRUE,
-            test.subgroup = FALSE,
-            overall.hetstat = FALSE,
-            overall = FALSE,
-            labeltext = TRUE,
-            col.subgroup = "black",
-            print.subgroup.name = F)
-
-# Close the PNG device
-dev.off()
-
-# viral suppression
-
-# forest plot for unadjusted viral load estimates
-
-filtered_df <- fsw_data_vs %>% 
-  filter(una_effect != "NR")
-
-vs_unadj <- metagen(TE = unadj_est_ln,
-                    lower = un_lower_ln,
-                    upper = un_upper_ln,
-                    studlab = study,
-                    data = filtered_df,
-                    sm = "OR",
-                    method.tau = "DL",
-                    comb.fixed = FALSE,
-                    comb.random = FALSE, 
-                    backtransf = TRUE,
-                    byvar = outcome,
-                    text.random = "Overall")
-
-# Print summary
-print(summary(vs_unadj)) 
-
-# Create PNG for forest plot
-png(filename = "C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence/Plots/vs_unadj.png", width = 45, height = 28, units = "cm", res = 600)
-
-# Generate forest plot
-forest.meta(vs_unadj, 
-            sortvar = TE,
-            xlim = c(0.2, 4),             
-            leftcols = c("study", "exposure_definition_short", "exposed_perc_string", "exposure_time_frame"), 
-            leftlabs = c("Study", "Exposure definition", "Exposed (%)", "Time frame"),
-            rightcols = c("or_95_2" , "outcome_definition", "who_region", "perpetrator"), 
-            rightlabs = c("OR (95% CI)","VS definition",  "WHO region", "Perpetrator"), 
-            pooled.totals = FALSE,
-            xintercept = 1,
-            addrow.overall = TRUE,
-            test.subgroup = FALSE,
-            overall.hetstat = FALSE,
-            overall = FALSE,
-            labeltext = TRUE,
-            col.subgroup = "black",
-            print.subgroup.name = F)
-
-# Close the PNG device
-dev.off()
-
-# forest plot for adjusted ART estimates
-
-filtered_df <- fsw_data_vs %>% 
-  filter(adj_effect != "NR")
-
-vs_adj <- metagen(TE = adj_est_ln,
-                  lower = adj_lower_ln,
-                  upper = adj_upper_ln,
-                  studlab = study,
-                  data = filtered_df,
-                  sm = "OR",
-                  method.tau = "DL",
-                  comb.fixed = FALSE,
-                  comb.random = FALSE, 
-                  backtransf = TRUE,
-                  byvar = outcome,
-                  text.random = "Overall")
-
-# Print summary
-print(summary(vs_adj)) 
-
-# Create PNG for forest plot
-png(filename = "C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence/Plots/vs_adj.png", width = 45, height = 28, units = "cm", res = 600)
-
-# Generate forest plot
-forest(vs_adj, 
-            sortvar = TE,
-            xlim = c(0.2, 4),             
-            leftcols = c("study", "exposure_definition_short", "exposed_perc_string", "exposure_time_frame"), 
-            leftlabs = c("Study", "Exposure definition", "Exposed (%)", "Time frame"),
-            rightcols = c("or_95_2" , "outcome_definition", "who_region", "perpetrator"), 
-            rightlabs = c("OR (95% CI)","VS definition",  "WHO region", "Perpetrator"), 
-            pooled.totals = FALSE,
-            xintercept = 1,
-            addrow.overall = TRUE,
-            test.subgroup = FALSE,
-            overall.hetstat = FALSE,
-            overall = FALSE,
-            labeltext = TRUE,
-            col.subgroup = "black",
-            print.subgroup.name = F)
-
-# Close the PNG device
-dev.off()
-
-
-# forest plot for combined vs estimates
-
-vs_best <- metagen(TE = effect_best_ln,
-                   lower = effect_best_lower_ln,
-                   upper = effect_best_upper_ln,
-                   studlab = study,
-                   data = fsw_data_vs,
-                   sm = "OR",
-                   method.tau = "DL",
-                   comb.fixed = FALSE,
-                   comb.random = FALSE, 
-                   backtransf = TRUE,
-                   byvar = outcome,
-                   text.random = "Overall")
-
-# Print summary
-print(summary(vs_best)) 
-
-# Create PNG for forest plot
-png(filename = "C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence/Plots/vs_best.png", width = 45, height = 28, units = "cm", res = 600)
-
-# Generate forest plot
-forest.meta(vs_best, 
-            sortvar = TE,
-            xlim = c(0.2, 4),             
-            leftcols = c("study", "exposure_definition_short", "exposed_perc_string", "exposure_time_frame"), 
-            leftlabs = c("Study", "Exposure definition", "Exposed (%)", "Time frame"),
-            rightcols = c("or_95_2" , "outcome_definition", "who_region", "perpetrator"), 
-            rightlabs = c("OR (95% CI)","VS definition",  "WHO region", "Perpetrator"), 
-            pooled.totals = FALSE,
-            xintercept = 1,
-            addrow.overall = TRUE,
-            test.subgroup = FALSE,
-            overall.hetstat = FALSE,
-            overall = FALSE,
-            labeltext = TRUE,
-            col.subgroup = "black",
-            print.subgroup.name = F)
-
-# Close the PNG device
-dev.off()
-
-# Print summary
-print(summary(art_best)) 
-
-# Create PNG for forest plot
-png(filename = "C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence/Plots/art_best.png", width = 45, height = 28, units = "cm", res = 600)
-
-# Generate forest plot
-forest.meta(art_best, 
-            sortvar = TE,
-            xlim = c(0.2, 4),             
-            leftcols = c("study", "exposure_definition_short", "exposed_perc_string", "exposure_time_frame"), 
-            leftlabs = c("Study", "Exposure definition", "Exposed (%)", "Time frame"),
-            rightcols = c("or_95_2" , "who_region", "perpetrator"), 
-            rightlabs = c("OR (95% CI)","WHO region", "Perpetrator"), 
-            pooled.totals = FALSE,
-            xintercept = 1,
-            addrow.overall = TRUE,
-            test.subgroup = FALSE,
-            overall.hetstat = FALSE,
-            overall = FALSE,
-            labeltext = TRUE,
-            col.subgroup = "black",
-            print.subgroup.name = F)
-
-# Close the PNG device
-dev.off()
-
-
-
-
-
-
-
