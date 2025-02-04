@@ -1,5 +1,5 @@
 # load packages 
-pacman::p_load("meta", "metafor", "readxl", "tidyverse", "kableExtra", "robumeta", "clubSandwich") 
+pacman::p_load("dplyr", "meta", "metafor", "readxl", "tidyverse", "kableExtra", "robumeta", "clubSandwich") 
 
 # set working directory
 setwd("C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence")
@@ -21,10 +21,276 @@ rightlabs = c("Outcome", "Estimate", "95% CI")
 # constant sampling correlation
 rho <- 0.6
 
-# Ensure the directory exists
-if (!dir.exists("Plots")) {
-  dir.create("Plots")
+# Unadjusted analyses with subgroups for exposure_type
+{
+  # Filter the dataframe for the desired conditions
+  filtered_df <- fsw_data_art %>% 
+    filter(exposure_tf_bin == "Recent") %>% 
+    filter(unadj_est != "NA") %>% 
+    filter(outcome_bin == "ART use")
+  
+  # Get unique levels of the exposure_type variable
+  unique_exposure_types <- unique(filtered_df$exposure_type)
+  
+  # Initialize lists to store results
+  metagen_list <- list()
+  subgroup_labels <- list()
+  
+  # Loop through each unique exposure type
+  for (exposure in unique_exposure_types) {
+    cat("Processing exposure type:", exposure, "\n")
+    
+    # Filter data for the current exposure type
+    subgroup_df <- filtered_df %>% filter(exposure_type == exposure)
+    
+    # Debug: Print the number of rows for the current subgroup
+    cat("Number of rows for", exposure, ":", nrow(subgroup_df), "\n")
+    
+    # Create a covariance matrix assuming constant sampling correlation
+    V_mat <- impute_covariance_matrix(subgroup_df$unadj_var_ln,
+                                      cluster = subgroup_df$study_num,
+                                      r = rho,
+                                      smooth_vi = TRUE)
+    
+    # Fit a multilevel random effects model using `rma.mv` from metafor
+    result <- rma.mv(unadj_est_ln, 
+                     V = V_mat, 
+                     random = ~ 1 | study_num / effect_num,
+                     data = subgroup_df,   
+                     sparse = TRUE)       
+    
+    cat("Model fitting complete for exposure type:", exposure, "\n")
+    
+    result 
+    exp(coef(result))
+    
+    result2 <- metagen(TE = subgroup_df$unadj_est_ln,
+                       lower = subgroup_df$un_lower_ln,
+                       upper = subgroup_df$un_upper_ln,
+                       studlab = subgroup_df$study,
+                       data = subgroup_df,
+                       sm = "OR",
+                       method.tau = "REML",
+                       common = FALSE,
+                       random = TRUE, 
+                       backtransf = TRUE)
+    
+    print(summary(result2))
+    
+    # Debug: Print the length of the current metagen object
+    cat("Length of TE for", exposure, ":", length(result2$TE), "\n")
+    
+    # Store the metagen object and subgroup label
+    metagen_list[[length(metagen_list) + 1]] <- result2
+    subgroup_labels[[length(subgroup_labels) + 1]] <- rep(exposure, length(result2$TE))
+  }
+  
+  # Combine the metagen objects into one
+  combined_TE <- unlist(lapply(metagen_list, function(x) x$TE))
+  combined_lower <- unlist(lapply(metagen_list, function(x) x$lower))
+  combined_upper <- unlist(lapply(metagen_list, function(x) x$upper))
+  combined_studlab <- unlist(lapply(metagen_list, function(x) x$studlab))
+  combined_subgroup <- unlist(subgroup_labels)
+  
+  # Debug: Print lengths of combined vectors
+  cat("Length of combined_TE:", length(combined_TE), "\n")
+  cat("Length of combined_studlab:", length(combined_studlab), "\n")
+  cat("Length of combined_subgroup:", length(combined_subgroup), "\n")
+  
+  # Ensure lengths match before creating the combined metagen object
+  if (length(combined_TE) == length(combined_studlab) && length(combined_TE) == length(combined_subgroup)) {
+    combined_metagen <- metagen(
+      TE = combined_TE,
+      lower = combined_lower,
+      upper = combined_upper,
+      studlab = combined_studlab,
+      subgroup = combined_subgroup,
+      sm = "OR",
+      method.tau = "REML",
+      common = FALSE,
+      random = TRUE,
+      backtransf = TRUE
+    )
+    
+    # Sanitize the filename
+    filename <- "Plots/recent_unadj_art_combined.png"
+    
+    cat("Saving combined plot to:", filename, "\n")
+    
+    png(filename = filename, width = 50, height = 18, units = "cm", res = 600)
+    
+    forest(combined_metagen,
+           sortvar = combined_metagen$studlab,
+           xlim = c(0.2, 4),             
+           leftcols = c("studlab", "TE", "lower", "upper"), 
+           leftlabs = c("Study", "OR", "Lower CI", "Upper CI"),
+           rightcols = c("w.random"),
+           rightlabs = c("Weight"),
+           pooled.totals = TRUE,
+           xintercept = 1,
+           addrow.overall = TRUE,
+           overall.hetstat = TRUE,
+           overall = TRUE,
+           labeltext = TRUE,
+           col.subgroup = "black")
+    
+    dev.off()
+    
+    cat("Combined plot saved.\n")
+  } else {
+    cat("Error: Lengths of combined vectors do not match.\n")
+  }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Unadjusted analyses with subgroups for exposure_type
 {
