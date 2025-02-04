@@ -35,6 +35,12 @@ rho <- 0.6
   # Initialize lists to store results
   metagen_list <- list()
   subgroup_labels <- list()
+  study_labels <- list()
+  outcome_labels <- list()
+  exposure_definitions <- list()
+  exposure_time_frames <- list()
+  perpetrators <- list()
+  countries <- list()
   
   # Loop through each unique exposure type
   for (exposure in unique_exposure_types) {
@@ -72,7 +78,7 @@ rho <- 0.6
                        sm = "OR",
                        method.tau = "REML",
                        common = FALSE,
-                       random = TRUE, 
+                       random = TRUE,
                        backtransf = TRUE)
     
     print(summary(result2))
@@ -80,9 +86,15 @@ rho <- 0.6
     # Debug: Print the length of the current metagen object
     cat("Length of TE for", exposure, ":", length(result2$TE), "\n")
     
-    # Store the metagen object and subgroup label
+    # Store the metagen object and additional labels
     metagen_list[[length(metagen_list) + 1]] <- result2
     subgroup_labels[[length(subgroup_labels) + 1]] <- rep(exposure, length(result2$TE))
+    study_labels[[length(study_labels) + 1]] <- subgroup_df$study
+    outcome_labels[[length(outcome_labels) + 1]] <- subgroup_df$outcome_definition_short
+    exposure_definitions[[length(exposure_definitions) + 1]] <- subgroup_df$exposure_definition_short
+    exposure_time_frames[[length(exposure_time_frames) + 1]] <- subgroup_df$exposure_time_frame
+    perpetrators[[length(perpetrators) + 1]] <- subgroup_df$perpetrator
+    countries[[length(countries) + 1]] <- subgroup_df$country
   }
   
   # Combine the metagen objects into one
@@ -91,20 +103,42 @@ rho <- 0.6
   combined_upper <- unlist(lapply(metagen_list, function(x) x$upper))
   combined_studlab <- unlist(lapply(metagen_list, function(x) x$studlab))
   combined_subgroup <- unlist(subgroup_labels)
+  combined_study <- unlist(study_labels)
+  combined_outcome <- unlist(outcome_labels)
+  combined_exposure_definition <- unlist(exposure_definitions)
+  combined_exposure_time_frame <- unlist(exposure_time_frames)
+  combined_perpetrator <- unlist(perpetrators)
+  combined_country <- unlist(countries)
   
   # Debug: Print lengths of combined vectors
   cat("Length of combined_TE:", length(combined_TE), "\n")
   cat("Length of combined_studlab:", length(combined_studlab), "\n")
   cat("Length of combined_subgroup:", length(combined_subgroup), "\n")
+  cat("Length of combined_study:", length(combined_study), "\n")
+  cat("Length of combined_outcome:", length(combined_outcome), "\n")
+  cat("Length of combined_exposure_definition:", length(combined_exposure_definition), "\n")
+  cat("Length of combined_exposure_time_frame:", length(combined_exposure_time_frame), "\n")
+  cat("Length of combined_perpetrator:", length(combined_perpetrator), "\n")
+  cat("Length of combined_country:", length(combined_country), "\n")
   
   # Ensure lengths match before creating the combined metagen object
-  if (length(combined_TE) == length(combined_studlab) && length(combined_TE) == length(combined_subgroup)) {
+  if (length(combined_TE) == length(combined_studlab) && length(combined_TE) == length(combined_subgroup) && length(combined_TE) == length(combined_study) && length(combined_TE) == length(combined_outcome) && length(combined_TE) == length(combined_exposure_definition) && length(combined_TE) == length(combined_exposure_time_frame) && length(combined_TE) == length(combined_perpetrator) && length(combined_TE) == length(combined_country)) {
+    combined_data <- data.frame(
+      study = combined_study,
+      subgroup = combined_subgroup,
+      outcome_definition_short = combined_outcome,
+      exposure_definition_short = combined_exposure_definition,
+      exposure_time_frame = combined_exposure_time_frame,
+      perpetrator = combined_perpetrator,
+      country = combined_country
+    )
+    
     combined_metagen <- metagen(
       TE = combined_TE,
       lower = combined_lower,
       upper = combined_upper,
-      studlab = combined_studlab,
-      subgroup = combined_subgroup,
+      studlab = combined_data$study,
+      subgroup = combined_data$subgroup,
       sm = "OR",
       method.tau = "REML",
       common = FALSE,
@@ -120,12 +154,11 @@ rho <- 0.6
     png(filename = filename, width = 50, height = 18, units = "cm", res = 600)
     
     forest(combined_metagen,
-           sortvar = combined_metagen$studlab,
            xlim = c(0.2, 4),             
-           leftcols = c("studlab", "TE", "lower", "upper"), 
-           leftlabs = c("Study", "OR", "Lower CI", "Upper CI"),
-           rightcols = c("w.random"),
-           rightlabs = c("Weight"),
+           leftcols = c("combined_studlab", "combined_exposure_definition", "combined_exposure_time_frame", "combined_perpetrator", "combined_country"), 
+           leftlabs = c("Study", "Exposure definition", "Exposure time frame", "Perpetrator", "Country"),
+           rightcols = c("combined_outcome"),
+           rightlabs = c("Outcome"),
            pooled.totals = TRUE,
            xintercept = 1,
            addrow.overall = TRUE,
@@ -141,18 +174,6 @@ rho <- 0.6
     cat("Error: Lengths of combined vectors do not match.\n")
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
