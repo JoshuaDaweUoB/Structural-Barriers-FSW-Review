@@ -71,3 +71,18 @@ format_violence_data <- function(df) {
   df$or_95_2 <- paste0(df$effect_best_str, " (", df$or_95, ")")
   return(df)
 }
+
+# create study number and effect number
+create_study_effect_nums <- function(df) {
+  # Sort the data by author and title
+  df <- df %>% arrange(author, title)
+  
+  # Create study_num and effect_num columns
+  df <- df %>%
+    group_by(title) %>%
+    mutate(effect_num = row_number()) %>%
+    ungroup() %>%
+    mutate(study_num = cumsum(!duplicated(title)))
+  
+  return(df)
+}
