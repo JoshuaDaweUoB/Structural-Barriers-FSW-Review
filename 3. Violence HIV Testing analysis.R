@@ -9,10 +9,10 @@ settings.meta(CIbracket = "(")
 settings.meta(CIseparator = "-") 
 
 # columns
-leftcols_recent <- c("study", "exposure_definition_short", "exposure_time_frame", "perpetrator", "country")
-leftlabs_recent <- c("Study", "Exposure definition", "Exposure time frame", "Perpetrator", "Country")
-leftcols_lifetime <- c("study", "exposure_definition_short", "perpetrator", "country")
-leftlabs_lifetime <- c("Study", "Exposure definition", "Perpetrator", "Country")
+leftcols_recent <- c("study", "study_num", "effect_num", "exposure_definition_short", "exposure_time_frame", "outcome_time_frame", "perpetrator", "country")
+leftlabs_recent <- c("Study", "Study number", "Effect number", "Exposure definition", "Exposure time frame", "Testing timeframe", "Perpetrator", "Country")
+leftcols_lifetime <- c("study", "study_num", "effect_num", "exposure_definition_short",  "outcome_time_frame", "perpetrator", "country")
+leftlabs_lifetime <- c("Study", "Study number", "Effect number", "Exposure definition", "Testing timeframe", "Perpetrator", "Country")
 rightcols <- c("effect", "ci")
 rightlabs = c("Estimate", "95% CI")
 
@@ -42,9 +42,13 @@ plot_filenames <- list(
 
 # Function to perform the analysis and create forest plots
 perform_analysis <- function(df, analysis) {
+ 
   # Filter the dataframe
   filtered_df <- df %>% filter(exposure_tf_bin == "Recent", use == "yes", !is.na(.[[var_names[[analysis]]$est]]))
   
+  # Create study_num and effect_num columns
+  filtered_df <- create_study_effect_nums(filtered_df)
+
   # Create a covariance matrix assuming constant sampling correlation
   V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
                                     cluster = filtered_df$study_num,
@@ -80,7 +84,7 @@ perform_analysis <- function(df, analysis) {
   result2$upper.random <- result$ci.ub
   
   filename <- plot_filenames[[analysis]]
-  png(filename = filename, width = 38, height = 14, units = "cm", res = 600)
+  png(filename = filename, width = 45, height = 14, units = "cm", res = 600)
   
   forest(result2,
          sortvar = filtered_df$study,
@@ -119,6 +123,9 @@ perform_analysis <- function(df, analysis, exposure) {
   # Filter the dataframe
   filtered_df <- df %>% filter(exposure_tf_bin == exposure, use == "yes", !is.na(.[[var_names[[analysis]]$est]]))
   
+  # Create study_num and effect_num columns
+  filtered_df <- create_study_effect_nums(filtered_df)
+
   # Create a covariance matrix assuming constant sampling correlation
   V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
                                     cluster = filtered_df$study_num,
@@ -154,13 +161,13 @@ perform_analysis <- function(df, analysis, exposure) {
   result2$upper.random <- result$ci.ub
   
   filename <- plot_filenames[[analysis]]
-  png(filename = filename, width = 38, height = 14, units = "cm", res = 600)
+  png(filename = filename, width = 45, height = 14, units = "cm", res = 600)
   
   forest(result2,
          sortvar = filtered_df$study,
-         xlim = c(0.2, 4),             
-         leftcols = leftcols_recent, 
-         leftlabs = leftlabs_recent,
+         xlim = c(0.2, 4),
+         leftcols = leftcols_lifetime,
+         leftlabs = leftlabs_lifetime,
          rightcols = rightcols,
          rightlabs = rightlabs,
          pooled.totals = TRUE,

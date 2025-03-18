@@ -9,12 +9,12 @@ settings.meta(CIbracket = "(")
 settings.meta(CIseparator = "-") 
 
 # columns
-leftcols_recent <- c("study", "exposure_definition_short", "exposure_time_frame", "perpetrator", "country")
-leftlabs_recent <- c("Study", "Exposure definition", "Exposure time frame", "Perpetrator", "Country")
-leftcols_lifetime <- c("study", "exposure_definition_short", "perpetrator", "country")
-leftlabs_lifetime <- c("Study", "Exposure definition", "Perpetrator", "Country")
-rightcols <- c("outcome_definition_short", "effect", "ci")
-rightlabs = c("Outcome", "Estimate", "95% CI")
+leftcols_recent <- c("study", "study_num", "effect_num", "exposure_definition_short", "exposure_time_frame", "perpetrator", "country")
+leftlabs_recent <- c("Study", "Study number", "Effect number", "Exposure definition", "Exposure time frame", "Perpetrator", "Country")
+leftcols_lifetime <- c("study", "study_num", "effect_num", "exposure_definition_short", "perpetrator", "country")
+leftlabs_lifetime <- c("Study", "Study number", "Effect number", "Exposure definition", "Perpetrator", "Country")
+rightcols <- c("effect", "ci")
+rightlabs = c("Estimate", "95% CI")
 
 #### multilevel random effects model with constant sampling correlation ####
 
@@ -23,12 +23,15 @@ rho <- 0.6
 
 # Unadjusted analyses with subgroups for exposure_type
 {
-  # Filter the dataframe for the desired conditions
+  # Filter the dataframe 
   filtered_df <- fsw_data_art %>% 
     filter(exposure_tf_bin == "Recent") %>% 
     filter(unadj_est != "NA") %>% 
     filter(outcome_bin == "ART use")
   
+   # Create study_num and effect_num columns
+  filtered_df <- create_study_effect_nums(filtered_df)
+
   # Get unique levels of the exposure_type variable
   unique_exposure_types <- unique(filtered_df$exposure_type)
   

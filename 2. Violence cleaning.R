@@ -75,10 +75,3 @@ for (var in dfs) {
   df <- format_violence_data(df)
   assign(var, df)
 }
-
-# create effect and study sequences
-#for (var in dfs) {
-#  df <- get(var)
-#  df <- create_study_effect_nums(df)
-#  assign(var, df)
-#}
