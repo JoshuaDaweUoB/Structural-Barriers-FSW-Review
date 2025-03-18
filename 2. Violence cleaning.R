@@ -9,17 +9,23 @@ setwd("C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/F
 # load testing data
 fsw_data_test <- read_excel("All violence studies.xlsx", "Testing data - All") 
 
-# load physical violence data
-fsw_data_pv_ever <- read_excel("All violence studies.xlsx", "Physical violence - Ever") 
-fsw_data_pv_recent <- read_excel("All violence studies.xlsx", "Physical violence - Recent") 
+# Load physical violence data
+fsw_data_pv_ever <- read_excel("All violence studies.xlsx", "Physical violence - Ever") %>%
+  filter(outcome == "HIV prevalence")
+fsw_data_pv_recent <- read_excel("All violence studies.xlsx", "Physical violence - Recent") %>%
+  filter(outcome == "HIV prevalence")
 
-# load sexual violence data
-fsw_data_sv_ever <- read_excel("All violence studies.xlsx", "Sexual violence - Ever")
-fsw_data_sv_recent <- read_excel("All violence studies.xlsx", "Sexual violence - Recent")
+# Load sexual violence data
+fsw_data_sv_ever <- read_excel("All violence studies.xlsx", "Sexual violence - Ever") %>%
+  filter(outcome == "HIV prevalence")
+fsw_data_sv_recent <- read_excel("All violence studies.xlsx", "Sexual violence - Recent") %>%
+  filter(outcome == "HIV prevalence")
 
-# load physical & sexual violence data
-fsw_data_psv_ever <- read_excel("All violence studies.xlsx", "Physical or sexual - Ever")
-fsw_data_psv_recent <- read_excel("All violence studies.xlsx", "Physical or sexual - Recent")
+# Load physical & sexual violence data
+fsw_data_psv_ever <- read_excel("All violence studies.xlsx", "Physical or sexual - Ever") %>%
+  filter(outcome == "HIV prevalence")
+fsw_data_psv_recent <- read_excel("All violence studies.xlsx", "Physical or sexual - Recent") %>%
+  filter(outcome == "HIV prevalence")
 
 # load art data
 fsw_data_art <- read_excel("All violence studies.xlsx", "ART data - All")
@@ -71,8 +77,8 @@ for (var in dfs) {
 }
 
 # create effect and study sequences
-for (var in dfs) {
-  df <- get(var)
-  df <- create_study_effect_nums(df)
-  assign(var, df)
-}
+#for (var in dfs) {
+#  df <- get(var)
+#  df <- create_study_effect_nums(df)
+#  assign(var, df)
+#}

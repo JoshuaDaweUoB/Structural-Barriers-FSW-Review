@@ -79,9 +79,7 @@ create_study_effect_nums <- function(df) {
   
   # Create study_num and effect_num columns
   df <- df %>%
-    group_by(title) %>%
     mutate(effect_num = row_number()) %>%
-    ungroup() %>%
     mutate(study_num = cumsum(!duplicated(title)))
   
   return(df)
