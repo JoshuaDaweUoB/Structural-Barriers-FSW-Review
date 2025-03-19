@@ -368,8 +368,10 @@ combined_results_df <- bind_rows(
   fsw_data_psv_ever_results
   )
 
-# Function to create a forest plot
 forest_plot <- function(df, title) {
+  # Filter out rows with missing values
+  df <- df %>% filter(!is.na(pooled_OR) & !is.na(lower_CI) & !is.na(upper_CI))
+  
   # Create a metagen object
   meta_analysis <- metagen(
     TE = df$pooled_OR,
@@ -380,7 +382,7 @@ forest_plot <- function(df, title) {
     sm = "OR",
     method.tau = "REML",
     common = FALSE,
-    random = FALSE,
+    random = TRUE,
     backtransf = TRUE,
     subgroup = df$column
   )
@@ -391,8 +393,8 @@ forest_plot <- function(df, title) {
          xlim = c(0.2, 4),
          leftcols = c("studlab"),
          leftlabs = c("Subgroup"),
-         rightcols = c("effect", "ci", "I2" ,"studies", "estimates"),
-         rightlabs = c("Estimate", "95% CI", "I²" ,"Studies", "Estimates"),
+         rightcols = c("effect", "ci", "I2", "studies", "estimates"),
+         rightlabs = c("Estimate", "95% CI", "I²", "Studies", "Estimates"),
          pooled.totals = FALSE,
          addfit = FALSE,
          xintercept = 1,
