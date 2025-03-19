@@ -13,6 +13,7 @@ process_and_save_study_data <- function(dfs, output_file) {
     
     # Process the dataframe
     df <- df %>%
+      filter(include == "yes") %>% # Keep only rows where include == "yes"
       arrange(study) %>% # Sort by the column 'study'
       group_by(study) %>% # Group by 'study'
       mutate(sequence = row_number()) %>% # Create a sequence within each group
@@ -46,18 +47,18 @@ all_studies <- bind_rows(lapply(dfs, function(var) {
       sample_size = as.character(sample_size), # Ensure sample_size is of the same type
       hiv_num = as.character(hiv_num),         # Ensure hiv_num is of the same type
       hiv_perc = as.character(hiv_perc)        # Ensure hiv_perc is of the same type
-    ) %>%
-    arrange(study) %>% # Sort by the column 'study'
-    group_by(study) %>%
-    mutate(sequence = row_number()) %>%
-    ungroup() %>%
-    filter(sequence == 1) %>%
-    select(study, title, pub_type, design, study_setting, sample_size, recruitment, 
-           country, cities, who_region, rob_score, sw_time_frame, hiv_num, hiv_perc)
+    )
 }), .id = "source_dataframe")
 
-# Sort the combined dataframe by the 'study' column
-all_studies <- all_studies %>% arrange(study)
+# Remove duplicates by creating a sequence grouped by 'study' across the combined dataframe
+all_studies <- all_studies %>%
+  arrange(study) %>% # Sort by the column 'study'
+  group_by(study) %>% # Group by 'study'
+  mutate(sequence = row_number()) %>% # Create a sequence grouped by 'study'
+  ungroup() %>%
+  filter(sequence == 1) %>% # Keep only rows where sequence equals 1
+  select(-sequence) %>% # Remove the sequence column
+  arrange(study) # Sort the final dataframe by 'study'
 
 # View the combined dataframe
 print(all_studies)
