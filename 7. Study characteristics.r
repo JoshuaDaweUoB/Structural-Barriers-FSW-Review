@@ -91,12 +91,20 @@ all_studies <- all_studies %>%
     location = paste0(cities, ", ", country) 
   )
 
+# Calculate the number of unique values in the country variable
+num_unique_countries <- all_studies %>%
+  summarise(unique_countries = n_distinct(country))
+
+# Print the result
+print(num_unique_countries)
+
 # Update the all_studies dataframe
 all_studies <- all_studies %>%
   # Select and reorder the columns
   select(
     study,
     location,
+    who_region,
     design,
     pub_type,
     sample_size,
@@ -105,14 +113,14 @@ all_studies <- all_studies %>%
     hiv_num,
     hiv_perc,
     recruitment,
-    who_region,
     rob_score
   ) %>%
-  
+
   # Rename the columns
   rename(
     "study" = study,
     "Location (city, country)" = location,
+    "WHO region" = who_region,
     "Study design" = design,
     "Publication type" = pub_type,
     "Sample size" = sample_size,
@@ -121,6 +129,44 @@ all_studies <- all_studies %>%
     "HIV (n)" = hiv_num,
     "HIV (%)" = hiv_perc,
     "Recruitment strategy" = recruitment,
-    "WHO region" = who_region,
     "ROB score" = rob_score
   )
+
+View(all_studies)
+# save the all_studies dataframe to an Excel file
+write_xlsx(all_studies, "All studies.xlsx")
+
+# characteristics of included studies
+
+# Descriptive table for "WHO region"
+who_region_table <- all_studies %>%
+  count(`WHO region`) %>%  # Use backticks for column names with spaces
+  mutate(percentage = n / sum(n) * 100)  # Calculate percentages
+
+# Descriptive table for "WHO region"
+study_design_table <- all_studies %>%
+  count(`Study design`) %>%  # Use backticks for column names with spaces
+  mutate(percentage = n / sum(n) * 100)  # Calculate percentages
+
+# Descriptive table for "Publication type"
+pub_type_table <- all_studies %>%
+  count(`Publication type`) %>%  # Use backticks for column names with spaces
+  mutate(percentage = n / sum(n) * 100)  # Calculate percentages
+
+# Print the tables
+print(who_region_table)
+print(pub_type_table)
+print(study_design_table)
+
+# Calculate total Sample size and total HIV (n)
+totals_table <- all_studies %>%
+  summarise(
+    total_sample_size = sum(as.numeric(`Sample size`), na.rm = TRUE),  # Convert Sample size to numeric and sum
+    total_hiv_n = sum(as.numeric(`HIV (n)`), na.rm = TRUE)             # Convert HIV (n) to numeric and sum
+  )
+
+# Print the totals table
+print(totals_table)
+
+## physical violence studies
+
