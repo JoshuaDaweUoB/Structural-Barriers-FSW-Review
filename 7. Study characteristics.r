@@ -168,5 +168,54 @@ totals_table <- all_studies %>%
 # Print the totals table
 print(totals_table)
 
-## physical violence studies
+## total studies for violence types
 
+# Define the types of violence and their corresponding sheet names
+violence_types <- c("Physical violence", "Sexual violence", "Physical or sexual")
+
+# Initialize an empty list to store the results for each type of violence
+all_violence_studies_list <- list()
+
+# Loop over each type of violence
+for (violence in violence_types) {
+  # Read the "Ever" and "Recent" sheets for the current type of violence
+  ever_stud <- read_excel("All violence studies.xlsx", paste0(violence, " - Ever")) %>%
+    select(study)
+  recent_stud <- read_excel("All violence studies.xlsx", paste0(violence, " - Recent")) %>%
+    select(study)
+  
+  # Combine the "Ever" and "Recent" data
+  combined_studies <- bind_rows(ever_stud, recent_stud) %>%
+    arrange(study) %>% # Sort by the column 'study'
+    group_by(study) %>% # Group by 'study'
+    mutate(sequence = row_number()) %>% # Create a sequence within each group
+    ungroup() %>%
+    filter(sequence == 1) # Keep only rows where sequence equals 1
+  
+  # Store the result in the list with the type of violence as the key
+  all_violence_studies_list[[violence]] <- combined_studies
+}
+
+# Access the results for each type of violence
+physical_violence_studies <- all_violence_studies_list[["Physical violence"]]
+sexual_violence_studies <- all_violence_studies_list[["Sexual violence"]]
+physical_or_sexual_violence_studies <- all_violence_studies_list[["Physical or sexual"]]
+View(physical_violence_studies)
+View(sexual_violence_studies)
+View(physical_or_sexual_violence_studies)
+
+
+
+
+
+
+
+
+
+
+
+# recent and lifetime violence
+- number reporting recent and lifetime exposure
+- number of participants and number reporting recent exposure and lifetime exposure
+- measures of association
+- subgroup findings
