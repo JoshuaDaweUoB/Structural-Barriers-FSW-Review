@@ -204,18 +204,84 @@ View(physical_violence_studies)
 View(sexual_violence_studies)
 View(physical_or_sexual_violence_studies)
 
-
-
-
-
-
-
-
-
-
-
 # recent and lifetime violence
-- number reporting recent and lifetime exposure
-- number of participants and number reporting recent exposure and lifetime exposure
-- measures of association
-- subgroup findings
+
+# Load physical violence data
+fsw_data_pv_ever_studies <- read_excel("All violence studies.xlsx", "Physical violence - Ever") 
+fsw_data_pv_recent_studies <- read_excel("All violence studies.xlsx", "Physical violence - Recent") 
+
+# Load sexual violence data
+fsw_data_sv_ever_studies<- read_excel("All violence studies.xlsx", "Sexual violence - Ever") 
+fsw_data_sv_recent_studies <- read_excel("All violence studies.xlsx", "Sexual violence - Recent") 
+
+# Load physical & sexual violence data
+fsw_data_psv_ever_studies <- read_excel("All violence studies.xlsx", "Physical or sexual - Ever") 
+fsw_data_psv_recent_studies <- read_excel("All violence studies.xlsx", "Physical or sexual - Recent") 
+
+# create list of dataframes
+dfs_studies <- c("fsw_data_pv_ever_studies", "fsw_data_pv_recent_studies", "fsw_data_sv_ever_studies", "fsw_data_sv_recent_studies", "fsw_data_psv_ever_studies", "fsw_data_psv_recent_studies")
+
+# Loop over the list of dataframe names
+for (df_name in dfs_studies) {
+  # Access the dataframe by its name
+  df <- get(df_name)
+  
+  # Convert exposed_num and sample_size to numeric, treating "NA" strings as NA
+  df <- df %>%
+    mutate(
+      exposed_num = as.numeric(ifelse(exposed_num == "NA", NA, exposed_num)),
+      sample_size = as.numeric(ifelse(sample_size == "NA", NA, sample_size))
+    ) %>%
+    # Filter rows with no missing values for exposed_num and sample_size
+    filter(!is.na(exposed_num) & !is.na(sample_size)) %>%
+    # Create a new variable exposed_perc2
+    mutate(
+      exposed_perc2 = exposed_num / sample_size * 100  # Calculate percentage
+    ) %>%
+    arrange(study, desc(exposed_perc)) %>% # Sort by 'study' and then by 'exposed_perc' in descending order
+    group_by(study) %>% # Group by 'study'
+    mutate(sequence = row_number()) %>% # Create a sequence within each group
+    ungroup() %>%
+    filter(sequence == 1) %>% # Keep only rows where sequence equals 1
+    select(study, exposed_num, exposed_perc, sample_size, exposed_perc2) # Keep specified columns
+  
+  # Assign the processed dataframe back to its original name
+  assign(df_name, df)
+}
+
+# Initialize an empty dataframe to store the summary results
+summary_table <- data.frame(
+  dataframe = character(),
+  total_exposed_num = numeric(),
+  total_sample_size = numeric(),
+  exposed_percentage = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# Loop over the list of dataframe names
+for (df_name in dfs_studies) {
+  # Access the dataframe by its name
+  df <- get(df_name)
+  
+  # Calculate the totals
+  total_exposed_num <- sum(df$exposed_num, na.rm = TRUE)  # Total exposed_num
+  total_sample_size <- sum(df$sample_size, na.rm = TRUE)  # Total sample_size
+  exposed_percentage <- (total_exposed_num / total_sample_size) * 100  # Percentage
+  
+  # Add the results to the summary table
+  summary_table <- rbind(
+    summary_table,
+    data.frame(
+      dataframe = df_name,
+      total_exposed_num = total_exposed_num,
+      total_sample_size = total_sample_size,
+      exposed_percentage = exposed_percentage
+    )
+  )
+}
+
+# Print the summary table
+print(summary_table)
+write_xlsx(summary_table, "Summary Table.xlsx")
+
+
