@@ -204,24 +204,45 @@ skipped_results_list <- list()
 # Loop through each dataframe
 for (i in 1:length(dataframes)) {
   
+  # Debug: Print the current dataframe name
+  message(paste("Processing dataframe:", dataframe_names[i]))
+  
   # Get the current dataframe and name
-  current_df <- dataframes[[i]]
+  current_df <- get(dataframes[[i]])  # Use `get()` to retrieve the actual dataframe
   current_df_name <- dataframe_names[i]
+  
+  # Debug: Check the structure of the dataframe
+  print(str(current_df))
   
   # Filter the dataframe for outcome = "HIV prevalence" and effect_best != "NA"
   filtered_df <- current_df %>% 
     filter(outcome == "HIV prevalence") %>% 
     filter(effect_best != "NA")
   
+  # Debug: Print the number of rows after filtering
+  message(paste("Filtered dataframe rows:", nrow(filtered_df)))
+  
   # Loop through each subgroup column
   for (column in subgroup_columns) {
+    # Debug: Print the current column being processed
+    message(paste("Processing column:", column))
+    
     # Get unique levels of the current column
     unique_levels <- unique(filtered_df[[column]])
     
+    # Debug: Print the unique levels
+    print(unique_levels)
+    
     # Loop through each unique level in the current column
     for (level in unique_levels) {
+      # Debug: Print the current level being processed
+      message(paste("Processing level:", level))
+      
       # Filter data for the current level
       subgroup_df <- filtered_df[filtered_df[[column]] == level, ]
+      
+      # Debug: Print the number of rows in the subgroup
+      message(paste("Subgroup rows:", nrow(subgroup_df)))
       
       # Handle cases with only one study
       if (nrow(subgroup_df) == 1) {
@@ -240,79 +261,110 @@ for (i in 1:length(dataframes)) {
         next
       }
       
-      # Create a covariance matrix for the subgroup
-      V_mat <- impute_covariance_matrix(subgroup_df$effect_best_var_ln,
-                                        cluster = subgroup_df$study_num,
-                                        r = rho,
-                                        smooth_vi = TRUE)
-      
-      # Fit the multilevel random effects model for the subgroup
-      result <- rma.mv(effect_best_ln, 
-                       V = V_mat, 
-                       random = ~ 1 | study_num / effect_num,
-                       data = subgroup_df,   
-                       control = list(rel.tol = 1e-8),
-                       sparse = TRUE)
-      
-      # Calculate I2 statistic
-      Q <- result$QE
-      df <- result$k - 1
-      I2 <- round(max(0, min(100 * (Q - df) / Q, 100)), 1)
-      
-      # Use `result` to update the `metagen` object
-      result2 <- metagen(TE = subgroup_df$effect_best_ln,
-                         lower = subgroup_df$effect_best_lower_ln,
-                         upper = subgroup_df$effect_best_upper_ln,
-                         studlab = subgroup_df$study,
-                         data = subgroup_df,
-                         sm = "OR",
-                         method.tau = "REML",
-                         common = FALSE,
-                         random = TRUE, 
-                         backtransf = TRUE,
-                         text.random = "Overall")
-      
-      # Update result2 with values from the multilevel model
-      result2$TE.random <- result$b
-      result2$lower.random <- result$ci.lb
-      result2$upper.random <- result$ci.ub
-      
-      # Store the results in the list
-      results_list[[length(results_list) + 1]] <- data.frame(
-        dataframe = current_df_name,
-        column = column,
-        level = level,
-        pooled_OR = exp(result$b),
-        lower_CI = exp(result$ci.lb),
-        upper_CI = exp(result$ci.ub),
-        estimates = nrow(subgroup_df),
-        studies = length(unique(subgroup_df$study_num)),
-        I2 = I2
-      )
-      
-      # Create a unique filename for the forest plot
-      filename <- paste0("Plots/subgroups/", current_df_name, "_", column, "_", level, ".png")
-      
-      # Save the forest plot as a PNG file
-      png(filename = filename, width = 38, height = 18, units = "cm", res = 600)
-      forest(result2,
-             sortvar = subgroup_df$study,
-             xlim = c(0.2, 4),             
-             leftcols = leftcols_recent, 
-             leftlabs = leftlabs_recent,
-             rightcols = rightcols,
-             rightlabs = rightlabs,
-             pooled.totals = TRUE,
-             xintercept = 1,
-             addrow.overall = TRUE,
-             overall.hetstat = TRUE,
-             overall = TRUE,
-             labeltext = TRUE,
-             col.subgroup = "black")
-      dev.off()
+      # Debug: Try-catch block for covariance matrix creation and model fitting
+      tryCatch({
+        # Create a covariance matrix for the subgroup
+        V_mat <- impute_covariance_matrix(subgroup_df$effect_best_var_ln,
+                                          cluster = subgroup_df$study_num,
+                                          r = rho,
+                                          smooth_vi = TRUE)
+        
+        # Debug: Print the covariance matrix
+        print(V_mat)
+        
+        # Fit the multilevel random effects model for the subgroup
+        result <- rma.mv(effect_best_ln, 
+                         V = V_mat, 
+                         random = ~ 1 | study_num / effect_num,
+                         data = subgroup_df,   
+                         control = list(rel.tol = 1e-8),
+                         sparse = TRUE)
+        
+        # Debug: Print the model results
+        print(result)
+        
+        # Calculate I2 statistic
+        Q <- result$QE
+        df <- result$k - 1
+        I2 <- round(max(0, min(100 * (Q - df) / Q, 100)), 1)
+        
+        # Debug: Print the I2 statistic
+        message(paste("I2 statistic:", I2))
+        
+        # Use `result` to update the `metagen` object
+        result2 <- metagen(TE = subgroup_df$effect_best_ln,
+                           lower = subgroup_df$effect_best_lower_ln,
+                           upper = subgroup_df$effect_best_upper_ln,
+                           studlab = subgroup_df$study,
+                           data = subgroup_df,
+                           sm = "OR",
+                           method.tau = "REML",
+                           common = FALSE,
+                           random = TRUE, 
+                           backtransf = TRUE,
+                           text.random = "Overall")
+        
+        # Update result2 with values from the multilevel model
+        result2$TE.random <- result$b
+        result2$lower.random <- result$ci.lb
+        result2$upper.random <- result$ci.ub
+        
+        # Debug: Print the updated metagen object
+        print(result2)
+        
+        # Store the results in the list
+        results_list[[length(results_list) + 1]] <- data.frame(
+          dataframe = current_df_name,
+          column = column,
+          level = level,
+          pooled_OR = exp(result$b),
+          lower_CI = exp(result$ci.lb),
+          upper_CI = exp(result$ci.ub),
+          estimates = nrow(subgroup_df),
+          studies = length(unique(subgroup_df$study_num)),
+          I2 = I2
+        )
+        
+        # Create a unique filename for the forest plot
+        filename <- paste0("Plots/subgroups/", current_df_name, "_", column, "_", level, ".png")
+        
+        # Save the forest plot as a PNG file
+        png(filename = filename, width = 38, height = 18, units = "cm", res = 600)
+        forest(result2,
+               sortvar = subgroup_df$study,
+               xlim = c(0.2, 4),             
+               leftcols = leftcols_recent, 
+               leftlabs = leftlabs_recent,
+               rightcols = rightcols,
+               rightlabs = rightlabs,
+               pooled.totals = TRUE,
+               xintercept = 1,
+               addrow.overall = TRUE,
+               overall.hetstat = TRUE,
+               overall = TRUE,
+               labeltext = TRUE,
+               col.subgroup = "black")
+        dev.off()
+      }, error = function(e) {
+        # Debug: Print the error message
+        message(paste("Error in processing level:", level, "in column:", column))
+        message(e)
+        
+        # Add the failed subgroup to the skipped results list
+        skipped_results_list[[length(skipped_results_list) + 1]] <- data.frame(
+          dataframe = current_df_name,
+          column = column,
+          level = level,
+          error_message = e$message
+        )
+      })
     }
   }
 }
+
+# Debug: Print the number of results and skipped results
+message(paste("Number of successful results:", length(results_list)))
+message(paste("Number of skipped results:", length(skipped_results_list)))
 
 # Combine the results list and skipped results list
 all_results_list <- c(results_list, skipped_results_list)
