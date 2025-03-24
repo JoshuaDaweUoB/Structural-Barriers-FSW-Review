@@ -23,76 +23,56 @@ dataframe_names <- c("fsw_data_pv_recent", "fsw_data_sv_recent", "fsw_data_psv_r
 analyses <- c("unadj", "adj", "best")
 exposures <- c("recent", "ever")
 
-# filtered dataframe
-filtered_df <- fsw_data_pv_recent %>% 
-  filter(outcome == "HIV prevalence") %>% 
-  filter(effect_best != "NA")
+
+#### separate variable into different dataframes for each level
+
+# Create a list to store the dataframes for all subgroup columns
+all_subgroup_dataframes <- list()
+
+# Loop through each column in subgroup_columns
+for (column in subgroup_columns) {
+  # Get unique levels of the current column
+  unique_levels <- unique(fsw_data_pv_recent[[column]])
   
-  # Create study_num and effect_num columns
-  filtered_df <- create_study_effect_nums(filtered_df)
-
-# Perform meta-analysis
-  pv_ldc_recent <- metagen(TE = effect_best_ln,
-                                  lower = effect_best_lower_ln,
-                                  upper = effect_best_upper_ln,
-                                  data = filtered_df,
-                                  sm = "OR",
-                                  method.tau = "DL",
-                                  comb.fixed = FALSE,
-                                  comb.random = FALSE, 
-                                  backtransf = TRUE,
-                                  byvar = ldc_bin,
-                                  text.random = "Overall")
+  # Debug: Print the current column and its unique levels
+  message(paste("Processing column:", column))
+  print(unique_levels)
   
-  # Print summary
-  print(summary(pv_ldc_recent))
-  
-  # Save forest plot
-  png(filename = "Plots/subgroups/ldc_pv_subgroup.png", width = 30, height = 28, units = "cm", res = 600)
-  forest(pv_ldc_recent, 
-         sortvar = study,
-         xlim = c(0.2, 4),             
-         leftcols = leftcols_recent, 
-         leftlabs = leftlabs_recent,
-         rightcols = rightcols, 
-         rightlabs = rightlabs, 
-         pooled.totals = FALSE,
-         xintercept = 1,
-         addrow.overall = TRUE,
-         test.subgroup = FALSE,
-         overall.hetstat = FALSE,
-         overall = FALSE,
-         labeltext = TRUE,
-         col.subgroup = "black",
-         print.subgroup.name = FALSE)
-  dev.off()
-
-
-
-
-
-
-
-
-
-
-
-
-# Filter the dataframe for outcome = "HIV prevalence" and effect_best != "NA"
-  filtered_df <- fsw_data_pv_recent %>% 
-    filter(outcome == "HIV prevalence") %>% 
-    filter(effect_best != "NA")
-  
-  # Debug: Print the number of rows after filtering
-  message(paste("Filtered dataframe rows:", nrow(filtered_df)))
-  
-  # Loop through each subgroup column
-  for (column in subgroup_columns) {
-    # Debug: Print the current column being processed
-    message(paste("Processing column:", column))
+  # Loop through each level of the current column
+  for (level in unique_levels) {
+    # Filter the dataframe for the current level
+    filtered_df <- fsw_data_pv_recent %>% filter(.data[[column]] == level)
     
-    # Get unique levels of the current column
-    unique_levels <- unique(filtered_df[[column]])
-    
-    # Debug: Print the unique levels
-    print(unique_levels)
+    # Assign the filtered dataframe to the list with a meaningful name
+    dataframe_name <- paste0("fsw_data_pv_recent_", column, "_", level)
+    all_subgroup_dataframes[[dataframe_name]] <- filtered_df
+  }
+}
+
+# Optionally, assign each dataframe to the global environment
+for (name in names(all_subgroup_dataframes)) {
+  assign(name, all_subgroup_dataframes[[name]])
+}
+
+# Print the names of the created dataframes
+message("Created dataframes: ", paste(names(all_subgroup_dataframes), collapse = ", "))
+
+filtered_df <- fsw_data_pv_recent_ldc_bin_no
+filtered_df <- create_study_effect_nums(filtered_df)
+
+  # Create a covariance matrix assuming constant sampling correlation
+  V_mat <- impute_covariance_matrix(filtered_df$effect_best_var_ln,
+                                    cluster = filtered_df$study_num,
+                                    r = rho,
+                                    smooth_vi = TRUE)
+
+result <- rma.mv(yi = filtered_df$effect_best_ln,  # Specify the effect size column
+                 V = V_mat, 
+                 random = ~ 1 | study_num / effect_num, 
+                 data = filtered_df, 
+                 sparse = TRUE)
+
+# Print the results
+print(result)
+print(exp(coef(result)))
+  
