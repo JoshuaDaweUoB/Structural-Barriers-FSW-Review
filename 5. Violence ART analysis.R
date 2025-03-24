@@ -267,6 +267,7 @@ for (analysis in analyses) {
   perform_analysis(fsw_data_art_uptake, analysis)
 }
 
+## lifetime
 
 # Define the corresponding plot filenames for each analysis
 plot_filenames <- list(
