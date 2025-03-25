@@ -198,7 +198,7 @@ fsw_data_pv_recent_subgroup <- fsw_data_pv_recent_subgroup %>%
   ))
 
 fsw_data_pv_recent_subgroup <- fsw_data_pv_recent_subgroup %>%
-  mutate(subgroup_level = case_when(
+  mutate(subgroup = case_when(
     subgroup == "ldc" ~ "Least developed country",
     subgroup == "lmic" ~ "Lower-middle income country",
     subgroup == "hiv" ~ "HIV decriminalisation",
