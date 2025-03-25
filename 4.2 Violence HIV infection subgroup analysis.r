@@ -4,26 +4,6 @@ pacman::p_load("meta", "metafor", "readxl", "openxlsx", "tidyverse", "kableExtra
 # set working directory
 setwd("C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence")
 
-# settings
-settings.meta(CIbracket = "(") 
-settings.meta(CIseparator = "-") 
-
-# columns
-leftcols_recent <- c("study", "study_num", "effect_num", "exposure_definition_short", "exposure_time_frame", "perpetrator", "country")
-leftlabs_recent <- c("Study", "Study number", "Effect number", "Exposure definition", "Exposure time frame", "Perpetrator", "Country")
-leftcols_lifetime <- c("study", "study_num", "effect_num", "exposure_definition_short", "perpetrator", "country")
-leftlabs_lifetime <- c("Study", "Study number", "Effect number", "Exposure definition", "Perpetrator", "Country")
-rightcols <- c("effect", "ci")
-rightlabs = c("Estimate", "95% CI")
-
-# lists for loops and functions
-subgroup_columns <- c("ldc_bin", "lmic_bin", "hiv_decrim", "gbv_law", "pre_2016", "recruitment", "perpetrator", "who_region", "rob_score")
-dataframes <- list(fsw_data_pv_recent, fsw_data_sv_recent, fsw_data_psv_recent, fsw_data_pv_ever, fsw_data_sv_ever, fsw_data_psv_ever)  
-dataframe_names <- c("fsw_data_pv_recent", "fsw_data_sv_recent", "fsw_data_psv_recent", "fsw_data_pv_ever", "fsw_data_sv_ever", "fsw_data_psv_ever")
-analyses <- c("unadj", "adj", "best")
-exposures <- c("recent", "ever")
-
-
 #### separate variable into different dataframes for each level
 
 # Create a list to store the dataframes for all subgroup columns
@@ -88,7 +68,6 @@ for (name in names(all_subgroup_dataframes)) {
 fsw_data_pv_recent_subgroup$model_coef <- NA
 fsw_data_pv_recent_subgroup$model_ci_lower <- NA
 fsw_data_pv_recent_subgroup$model_ci_upper <- NA
-fsw_data_pv_recent_subgroup$model_pval <- NA
 fsw_data_pv_recent_subgroup$studies<- NA
 fsw_data_pv_recent_subgroup$estimates <- NA
 
@@ -142,13 +121,11 @@ for (name in names(all_subgroup_dataframes)) {
       coef <- exp(coef(result))  # Exponentiated coefficient
       ci_lower <- exp(result$ci.lb)  # Lower bound of confidence interval
       ci_upper <- exp(result$ci.ub)  # Upper bound of confidence interval
-      pval <- result$pval  # P-value
     } else {
       # Handle cases where k == 1
       coef <- exp(filtered_df$effect_best_ln)
       ci_lower <- exp(filtered_df$effect_best_ln - 1.96 * sqrt(filtered_df$effect_best_var_ln))
       ci_upper <- exp(filtered_df$effect_best_ln + 1.96 * sqrt(filtered_df$effect_best_var_ln))
-      pval <- NA  # P-value cannot be calculated for k == 1
     }
     
     # Extract subgroup and level
@@ -177,7 +154,6 @@ for (name in names(all_subgroup_dataframes)) {
     fsw_data_pv_recent_subgroup$model_coef[row_index] <- coef
     fsw_data_pv_recent_subgroup$model_ci_lower[row_index] <- ci_lower
     fsw_data_pv_recent_subgroup$model_ci_upper[row_index] <- ci_upper
-    fsw_data_pv_recent_subgroup$model_pval[row_index] <- pval
     fsw_data_pv_recent_subgroup$studies[row_index] <- num_studies
     fsw_data_pv_recent_subgroup$estimates[row_index] <- num_estimates
     
@@ -193,6 +169,47 @@ for (name in names(all_subgroup_dataframes)) {
     message(e)
   })
 }
+
+## renaming rows
+
+# Rename values in the subgroup_level column
+fsw_data_pv_recent_subgroup <- fsw_data_pv_recent_subgroup %>%
+  mutate(subgroup_level = case_when(
+    subgroup_level == "bin_no" ~ "No",
+    subgroup_level == "bin_yes" ~ "Yes",
+    subgroup_level == "decrim_partial" ~ "Partial",
+    subgroup_level == "decrim_yes" ~ "Yes",
+    subgroup_level == "decrim_no" ~ "No",
+    subgroup_level == "law_yes" ~ "Yes",
+    subgroup_level == "law_no" ~ "No",
+    subgroup_level == "2016_FALSE" ~ "No",
+    subgroup_level == "2016_TRUE" ~ "Yes",
+    subgroup_level == "region_African Region" ~ "African Region",
+    subgroup_level == "region_Region of the Americas" ~ "Region of the Americas",
+    subgroup_level == "region_South-East Asia Region" ~ "South-East Asia Region",
+    subgroup_level == "region_European region" ~ "European region",
+    subgroup_level == "region_Eastern Mediterranean region" ~ "Eastern Mediterranean region",
+    subgroup_level == "region_Western Pacific region" ~ "Western Pacific region",
+    subgroup_level == "score_Good" ~ "Good",
+    subgroup_level == "score_Very good" ~ "Very good",
+    subgroup_level == "score_Satisfactory" ~ "Satisfactory",
+    subgroup_level == "score_Unsatisfactory" ~ "Unsatisfactory",
+    TRUE ~ subgroup_level  # Keep other values unchanged
+  ))
+
+fsw_data_pv_recent_subgroup <- fsw_data_pv_recent_subgroup %>%
+  mutate(subgroup_level = case_when(
+    subgroup == "ldc" ~ "Least developed country",
+    subgroup == "lmic" ~ "Lower-middle income country",
+    subgroup == "hiv" ~ "HIV decriminalisation",
+    subgroup == "gbv" ~ "Gender-based violence law",
+    subgroup == "pre" ~ "Published before 2016",
+    subgroup == "recruitment" ~ "Recruitment",
+    subgroup == "perpetrator" ~ "Perpetrator",
+    subgroup == "who" ~ "WHO region",
+    subgroup == "rob" ~ "Risk of bias score",
+    TRUE ~ subgroup  # Keep other values unchanged
+  ))
 
 # Print the final results dataframe
 View(fsw_data_pv_recent_subgroup)
