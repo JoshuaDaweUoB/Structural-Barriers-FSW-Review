@@ -211,5 +211,55 @@ fsw_data_pv_recent_subgroup <- fsw_data_pv_recent_subgroup %>%
     TRUE ~ subgroup  # Keep other values unchanged
   ))
 
-# Print the final results dataframe
+# Drop rows with missing values from fsw_data_pv_recent_subgroup
+fsw_data_pv_recent_subgroup <- fsw_data_pv_recent_subgroup %>%
+  drop_na()
+
+# create log of OR and 95% CIs
+fsw_data_pv_recent_subgroup <- fsw_data_pv_recent_subgroup %>%
+  mutate(
+    log_model_coef = log(model_coef),
+    log_model_ci_lower = log(model_ci_lower),
+    log_model_ci_upper = log(model_ci_upper)
+  )
+
+# View the updated dataframe
 View(fsw_data_pv_recent_subgroup)
+
+# Perform meta-analysis
+fsw_data_pv_recent_subgroup_forest <- metagen(
+  TE = model_coef,
+  lower = log_model_coef,
+  upper = log_model_ci_upper,
+  data = fsw_data_pv_recent_subgroup,
+  sm = "OR",
+  method.tau = "DL",
+  comb.fixed = FALSE,
+  comb.random = FALSE, 
+  backtransf = TRUE,
+  byvar = subgroup, 
+  text.random = "Overall"
+)
+
+# Print summary
+print(summary(fsw_data_pv_recent_subgroup_forest))
+
+# Save forest plot
+png(filename = "Plots/overall plots/recent_pv_subgroup.png", width = 30, height = 30, units = "cm", res = 600)
+forest(
+  fsw_data_pv_recent_subgroup_forest,
+  sortvar = subgroup,
+  xlim = c(0.2, 4),             
+  leftcols = c("subgroup_level", "studies", "estimates"), 
+  leftlabs = c("Category", "Nb studies", "Nb estimates"),
+  pooled.totals = FALSE,
+  xintercept = 1,
+  addrow.overall = TRUE,
+  test.subgroup = FALSE,
+  overall.hetstat = FALSE,
+  overall = FALSE,
+  labeltext = TRUE,
+  col.subgroup = "black",
+  print.subgroup.name = FALSE
+)
+dev.off()
