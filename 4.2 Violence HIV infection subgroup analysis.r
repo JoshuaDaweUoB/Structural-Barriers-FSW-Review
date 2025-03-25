@@ -49,7 +49,7 @@ for (column in subgroup_columns) {
   }
 }
 
-# Optionally, assign each dataframe to the global environment
+# assign each dataframe to the global environment
 for (name in names(all_subgroup_dataframes)) {
   assign(name, all_subgroup_dataframes[[name]])
 }
@@ -57,22 +57,195 @@ for (name in names(all_subgroup_dataframes)) {
 # Print the names of the created dataframes
 message("Created dataframes: ", paste(names(all_subgroup_dataframes), collapse = ", "))
 
-filtered_df <- fsw_data_pv_recent_ldc_bin_no
-filtered_df <- create_study_effect_nums(filtered_df)
+## create empty dataframe with subgroups as rows
 
-  # Create a covariance matrix assuming constant sampling correlation
-  V_mat <- impute_covariance_matrix(filtered_df$effect_best_var_ln,
-                                    cluster = filtered_df$study_num,
-                                    r = rho,
-                                    smooth_vi = TRUE)
+# Initialize an empty dataframe to store subgroup results
+fsw_data_pv_recent_subgroup <- data.frame(
+  subgroup_level = character(),
+  subgroup = character(),
+  stringsAsFactors = FALSE
+)
 
-result <- rma.mv(yi = filtered_df$effect_best_ln,  # Specify the effect size column
-                 V = V_mat, 
-                 random = ~ 1 | study_num / effect_num, 
-                 data = filtered_df, 
-                 sparse = TRUE)
-
-# Print the results
-print(result)
-print(exp(coef(result)))
+# Loop through each dataframe in the global environment to populate the subgroup dataframe
+for (name in names(all_subgroup_dataframes)) {
+  # Remove the prefix "fsw_data_pv_recent_" from the subgroup name
+  subgroup_name <- sub("fsw_data_pv_recent_", "", name)
   
+  # Extract the subgroup (e.g., "ldc_bin" from "ldc_bin_no")
+  subgroup <- sub("^(.*?)_.*$", "\\1", subgroup_name)
+  
+  # Extract only the level (e.g., "no" from "ldc_bin_no")
+  subgroup_level <- sub(".*_(.*)$", "\\1", subgroup_name)
+  
+  # Append the cleaned subgroup name and level to the results dataframe
+  fsw_data_pv_recent_subgroup <- rbind(
+    fsw_data_pv_recent_subgroup,
+    data.frame(subgroup_level = subgroup_level, subgroup = subgroup, stringsAsFactors = FALSE)
+  )
+}
+
+# Print the final subgroup dataframe
+View(fsw_data_pv_recent_subgroup)
+
+
+
+
+
+
+
+
+
+## run a model over each subgroup dataframe
+
+# Loop through each dataframe in the global environment to fit models
+for (name in names(all_subgroup_dataframes)) {
+  # Access the dataframe directly from the global environment
+  filtered_df <- get(name)
+  
+  # Debug: Print the name of the dataframe being processed
+  message(paste("Processing dataframe:", name))
+  
+  # Skip if the dataframe is empty
+  if (nrow(filtered_df) == 0) {
+    message(paste("Skipping dataframe:", name, "- it is empty."))
+    next
+  }
+  
+  # Check for missing columns and attempt to create them
+  if (!"study_num" %in% colnames(filtered_df) || !"effect_num" %in% colnames(filtered_df)) {
+    message(paste("Creating study_num and effect_num for dataframe:", name))
+    filtered_df <- create_study_effect_nums(filtered_df)
+  }
+  
+  # Check if effect size columns are missing
+  if (!"effect_best_var_ln" %in% colnames(filtered_df) || !"effect_best_ln" %in% colnames(filtered_df)) {
+    message(paste("Skipping dataframe:", name, "- missing effect size columns."))
+    next
+  }
+  
+  # Create a covariance matrix assuming constant sampling correlation
+  rho <- 0.6
+  tryCatch({
+    V_mat <- impute_covariance_matrix(filtered_df$effect_best_var_ln,
+                                      cluster = filtered_df$study_num,
+                                      r = rho,
+                                      smooth_vi = TRUE)
+    
+    # Fit a multilevel random effects model using `rma.mv` from metafor
+    result <- rma.mv(yi = filtered_df$effect_best_ln,  # Specify the effect size column
+                     V = V_mat, 
+                     random = ~ 1 | study_num / effect_num, 
+                     data = filtered_df, 
+                     sparse = TRUE)
+    
+    # Print the results
+    print(result)
+    print(exp(coef(result)))
+  }, error = function(e) {
+    message(paste("Error processing dataframe:", name))
+    message(e)
+  })
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Initialize an empty dataframe to store subgroup results
+fsw_data_pv_recent_subgroup <- data.frame(
+  subgroup_level = character(),
+  subgroup = character(),
+  stringsAsFactors = FALSE
+)
+
+# Loop through each dataframe in the global environment
+for (name in names(all_subgroup_dataframes)) {
+  # Access the dataframe directly from the global environment
+  filtered_df <- get(name)
+  
+  # Debug: Print the name of the dataframe being processed
+  message(paste("Processing dataframe:", name))
+  
+  # Skip if the dataframe is empty
+  if (nrow(filtered_df) == 0) {
+    message(paste("Skipping dataframe:", name, "- it is empty."))
+    next
+  }
+  
+  # Check for missing columns and attempt to create them
+  if (!"study_num" %in% colnames(filtered_df) || !"effect_num" %in% colnames(filtered_df)) {
+    message(paste("Creating study_num and effect_num for dataframe:", name))
+    filtered_df <- create_study_effect_nums(filtered_df)
+  }
+  
+  # Check if effect size columns are missing
+  if (!"effect_best_var_ln" %in% colnames(filtered_df) || !"effect_best_ln" %in% colnames(filtered_df)) {
+    message(paste("Skipping dataframe:", name, "- missing effect size columns."))
+    next
+  }
+  
+  # Create a covariance matrix assuming constant sampling correlation
+  rho <- 0.6
+  tryCatch({
+    V_mat <- impute_covariance_matrix(filtered_df$effect_best_var_ln,
+                                      cluster = filtered_df$study_num,
+                                      r = rho,
+                                      smooth_vi = TRUE)
+    
+    # Fit a multilevel random effects model using `rma.mv` from metafor
+    result <- rma.mv(yi = filtered_df$effect_best_ln,  # Specify the effect size column
+                     V = V_mat, 
+                     random = ~ 1 | study_num / effect_num, 
+                     data = filtered_df, 
+                     sparse = TRUE)
+    
+    # Print the results
+    print(result)
+    print(exp(coef(result)))
+    
+    # Remove the prefix "fsw_data_pv_recent_" from the subgroup name
+    subgroup_name <- sub("fsw_data_pv_recent_", "", name)
+    
+    # Extract the subgroup (e.g., "who_region" from "who_region_African Region")
+    subgroup <- sub("^(.*?)_.*$", "\\1", subgroup_name)
+    
+    # Extract only the level (e.g., "African Region" from "who_region_African Region")
+    subgroup_level <- sub("^.*?_(.*)$", "\\1", subgroup_name)
+    
+    # Append the subgroup name and subgroup to the results dataframe
+    fsw_data_pv_recent_subgroup <- rbind(
+      fsw_data_pv_recent_subgroup,
+      data.frame(subgroup_level = subgroup_level, subgroup = subgroup, stringsAsFactors = FALSE)
+    )
+  }, error = function(e) {
+    message(paste("Error processing dataframe:", name))
+    message(e)
+  })
+}
+
+# Print the final results dataframe
+View(fsw_data_pv_recent_subgroup)
