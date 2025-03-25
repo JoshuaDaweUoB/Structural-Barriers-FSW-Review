@@ -59,14 +59,14 @@ message("Created dataframes: ", paste(names(all_subgroup_dataframes), collapse =
 
 ## create empty dataframe with subgroups as rows
 
-# Initialize an empty dataframe to store subgroup results
+# Create the fsw_data_pv_recent_subgroup dataframe
 fsw_data_pv_recent_subgroup <- data.frame(
   subgroup_level = character(),
   subgroup = character(),
   stringsAsFactors = FALSE
 )
 
-# Loop through each dataframe in the global environment to populate the subgroup dataframe
+# Populate the fsw_data_pv_recent_subgroup dataframe
 for (name in names(all_subgroup_dataframes)) {
   # Remove the prefix "fsw_data_pv_recent_" from the subgroup name
   subgroup_name <- sub("fsw_data_pv_recent_", "", name)
@@ -75,7 +75,7 @@ for (name in names(all_subgroup_dataframes)) {
   subgroup <- sub("^(.*?)_.*$", "\\1", subgroup_name)
   
   # Extract only the level (e.g., "no" from "ldc_bin_no")
-  subgroup_level <- sub(".*_(.*)$", "\\1", subgroup_name)
+  subgroup_level <- sub("^[^_]*_", "", subgroup_name)
   
   # Append the cleaned subgroup name and level to the results dataframe
   fsw_data_pv_recent_subgroup <- rbind(
@@ -84,16 +84,14 @@ for (name in names(all_subgroup_dataframes)) {
   )
 }
 
+# Add columns to store model results
+fsw_data_pv_recent_subgroup$model_coef <- NA
+fsw_data_pv_recent_subgroup$model_ci_lower <- NA
+fsw_data_pv_recent_subgroup$model_ci_upper <- NA
+fsw_data_pv_recent_subgroup$model_pval <- NA
+
 # Print the final subgroup dataframe
 View(fsw_data_pv_recent_subgroup)
-
-
-
-
-
-
-
-
 
 ## run a model over each subgroup dataframe
 
@@ -138,18 +136,47 @@ for (name in names(all_subgroup_dataframes)) {
                      data = filtered_df, 
                      sparse = TRUE)
     
+    # Extract model results
+    coef <- exp(coef(result))  # Exponentiated coefficient
+    ci_lower <- exp(result$ci.lb)  # Lower bound of confidence interval
+    ci_upper <- exp(result$ci.ub)  # Upper bound of confidence interval
+    pval <- result$pval  # P-value
+    
+    # Extract subgroup and level
+    subgroup_name <- sub("fsw_data_pv_recent_", "", name)
+    subgroup <- sub("^(.*?)_.*$", "\\1", subgroup_name)
+    subgroup_level <- sub("^[^_]*_", "", subgroup_name)
+    
+    # Debug: Print extracted values
+    message(paste("Extracted subgroup:", subgroup, "and level:", subgroup_level))
+    
+    # Find the corresponding row in fsw_data_pv_recent_subgroup
+    row_index <- which(fsw_data_pv_recent_subgroup$subgroup_level == subgroup_level & 
+                       fsw_data_pv_recent_subgroup$subgroup == subgroup)
+    
+    # Debug: Check if row_index is found
+    if (length(row_index) == 0) {
+      message(paste("No matching row found for subgroup:", subgroup, "and level:", subgroup_level))
+      next
+    }
+    
+    # Store the results in the dataframe
+    fsw_data_pv_recent_subgroup$model_coef[row_index] <- coef
+    fsw_data_pv_recent_subgroup$model_ci_lower[row_index] <- ci_lower
+    fsw_data_pv_recent_subgroup$model_ci_upper[row_index] <- ci_upper
+    fsw_data_pv_recent_subgroup$model_pval[row_index] <- pval
+    
     # Print the results
     print(result)
-    print(exp(coef(result)))
+    print(coef)
   }, error = function(e) {
     message(paste("Error processing dataframe:", name))
     message(e)
   })
 }
 
-
-
-
+# Print the final results dataframe
+View(fsw_data_pv_recent_subgroup)
 
 
 
