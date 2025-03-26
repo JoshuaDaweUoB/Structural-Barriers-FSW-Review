@@ -278,6 +278,12 @@ dev.off()
 
 
 
+
+
+
+
+
+
 # Load packages
 pacman::p_load("meta", "metafor", "readxl", "openxlsx", "tidyverse", "kableExtra", "robumeta", "clubSandwich")
 
@@ -440,3 +446,122 @@ fsw_data_subgroup_results <- fsw_data_subgroup_results %>%
 
 # View the final results dataframe
 View(fsw_data_subgroup_results)
+
+# Generate and save forest plots for each dataframe
+for (df_name in names(dataframes_to_process)) {
+  # Filter results for the current dataframe
+  current_results <- fsw_data_subgroup_results %>%
+    filter(grepl(df_name, subgroup))
+  
+  # Skip if there are no results for the current dataframe
+  if (nrow(current_results) == 0) {
+    message(paste("Skipping forest plot for:", df_name, "- no results available."))
+    next
+  }
+  
+  # Perform meta-analysis
+  forest_plot <- metagen(
+    TE = log_model_coef,
+    lower = log_model_ci_lower,
+    upper = log_model_ci_upper,
+    data = current_results,
+    sm = "OR",
+    method.tau = "DL",
+    comb.fixed = FALSE,
+    comb.random = FALSE, 
+    backtransf = TRUE,
+    byvar = subgroup, 
+    text.random = "Overall"
+  )
+  
+  # Save the forest plot
+  plot_filename <- paste0("Plots/overall plots/", df_name, "_subgroup.png")
+  png(filename = plot_filename, width = 30, height = 30, units = "cm", res = 600)
+  forest(
+    forest_plot,
+    sortvar = subgroup,
+    xlim = c(0.2, 4),             
+    leftcols = c("subgroup_level", "studies", "estimates"), 
+    leftlabs = c("Category", "Nb studies", "Nb estimates"),
+    pooled.totals = FALSE,
+    xintercept = 1,
+    addrow.overall = TRUE,
+    test.subgroup = FALSE,
+    overall.hetstat = FALSE,
+    overall = FALSE,
+    labeltext = TRUE,
+    col.subgroup = "black",
+    print.subgroup.name = FALSE
+  )
+  dev.off()
+  
+  # Print a message indicating the plot was saved
+  message(paste("Saved forest plot for:", df_name, "as", plot_filename))
+}
+
+
+
+
+
+
+
+
+
+
+
+
+# Add a column to store the dataframe name in fsw_data_subgroup_results
+fsw_data_subgroup_results <- fsw_data_subgroup_results %>%
+  mutate(dataframe = rep(names(dataframes_to_process), each = nrow(fsw_data_subgroup_results) / length(dataframes_to_process)))
+
+# Generate and save forest plots for each dataframe
+for (df_name in names(dataframes_to_process)) {
+  # Filter results for the current dataframe
+  current_results <- fsw_data_subgroup_results %>%
+    filter(dataframe == df_name)
+  
+  # Skip if there are no results for the current dataframe
+  if (nrow(current_results) == 0) {
+    message(paste("Skipping forest plot for:", df_name, "- no results available."))
+    next
+  }
+  
+  # Perform meta-analysis
+  forest_plot <- metagen(
+    TE = log_model_coef,
+    lower = log_model_ci_lower,
+    upper = log_model_ci_upper,
+    data = current_results,
+    sm = "OR",
+    method.tau = "DL",
+    comb.fixed = FALSE,
+    comb.random = FALSE, 
+    backtransf = TRUE,
+    byvar = subgroup,
+    text.random = "Overall"
+  )
+  
+  # Save the forest plot
+  plot_filename <- paste0("Plots/overall plots/", df_name, "_subgroup.png")
+  png(filename = plot_filename, width = 30, height = 30, units = "cm", res = 600)
+  forest(
+    forest_plot,
+    sortvar = subgroup,
+    xlim = c(0.2, 4),
+    leftcols = c("subgroup_level", "studies", "estimates"), 
+    leftlabs = c("Category", "Nb studies", "Nb estimates"),
+    pooled.totals = FALSE,
+    xintercept = 1,
+    addrow.overall = TRUE,
+    test.subgroup = FALSE,
+    overall.hetstat = FALSE,
+    overall = FALSE,
+    labeltext = TRUE,
+    col.subgroup = "black",
+    print.subgroup.name = FALSE
+  )
+  dev.off()
+  
+  # Print a message indicating the plot was saved
+  message(paste("Saved forest plot for:", df_name, "as", plot_filename))
+}
