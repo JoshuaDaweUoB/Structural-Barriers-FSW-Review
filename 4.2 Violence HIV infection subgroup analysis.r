@@ -170,6 +170,18 @@ for (name in names(all_subgroup_dataframes)) {
   })
 }
 
+# Drop rows with missing values from fsw_data_pv_recent_subgroup
+fsw_data_pv_recent_subgroup <- fsw_data_pv_recent_subgroup %>%
+  drop_na()
+
+# create log of OR and 95% CIs
+fsw_data_pv_recent_subgroup <- fsw_data_pv_recent_subgroup %>%
+  mutate(
+    log_model_coef = log(model_coef),
+    log_model_ci_lower = log(model_ci_lower),
+    log_model_ci_upper = log(model_ci_upper)
+  )
+
 ## renaming rows
 
 # Rename values in the subgroup_level column
@@ -187,9 +199,9 @@ fsw_data_pv_recent_subgroup <- fsw_data_pv_recent_subgroup %>%
     subgroup_level == "region_African Region" ~ "African Region",
     subgroup_level == "region_Region of the Americas" ~ "Region of the Americas",
     subgroup_level == "region_South-East Asia Region" ~ "South-East Asia Region",
-    subgroup_level == "region_European region" ~ "European region",
-    subgroup_level == "region_Eastern Mediterranean region" ~ "Eastern Mediterranean region",
-    subgroup_level == "region_Western Pacific region" ~ "Western Pacific region",
+    subgroup_level == "region_European region" ~ "European Region",
+    subgroup_level == "region_Eastern Mediterranean Region" ~ "Eastern Mediterranean Region",
+    subgroup_level == "region_Western Pacific Region" ~ "Western Pacific Region",
     subgroup_level == "score_Good" ~ "Good",
     subgroup_level == "score_Very good" ~ "Very good",
     subgroup_level == "score_Satisfactory" ~ "Satisfactory",
@@ -211,24 +223,12 @@ fsw_data_pv_recent_subgroup <- fsw_data_pv_recent_subgroup %>%
     TRUE ~ subgroup  # Keep other values unchanged
   ))
 
-# Drop rows with missing values from fsw_data_pv_recent_subgroup
-fsw_data_pv_recent_subgroup <- fsw_data_pv_recent_subgroup %>%
-  drop_na()
-
-# create log of OR and 95% CIs
-fsw_data_pv_recent_subgroup <- fsw_data_pv_recent_subgroup %>%
-  mutate(
-    log_model_coef = log(model_coef),
-    log_model_ci_lower = log(model_ci_lower),
-    log_model_ci_upper = log(model_ci_upper)
-  )
-
 # View the updated dataframe
 View(fsw_data_pv_recent_subgroup)
 
 # Perform meta-analysis
 fsw_data_pv_recent_subgroup_forest <- metagen(
-  TE = model_coef,
+  TE = log_model_coef,
   lower = log_model_coef,
   upper = log_model_ci_upper,
   data = fsw_data_pv_recent_subgroup,
