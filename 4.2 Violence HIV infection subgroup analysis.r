@@ -199,7 +199,7 @@ fsw_data_pv_recent_subgroup <- fsw_data_pv_recent_subgroup %>%
     subgroup_level == "region_African Region" ~ "African Region",
     subgroup_level == "region_Region of the Americas" ~ "Region of the Americas",
     subgroup_level == "region_South-East Asia Region" ~ "South-East Asia Region",
-    subgroup_level == "region_European region" ~ "European Region",
+    subgroup_level == "region_European Region" ~ "European Region",
     subgroup_level == "region_Eastern Mediterranean Region" ~ "Eastern Mediterranean Region",
     subgroup_level == "region_Western Pacific Region" ~ "Western Pacific Region",
     subgroup_level == "score_Good" ~ "Good",
@@ -229,7 +229,7 @@ View(fsw_data_pv_recent_subgroup)
 # Perform meta-analysis
 fsw_data_pv_recent_subgroup_forest <- metagen(
   TE = log_model_coef,
-  lower = log_model_coef,
+  lower = log_model_ci_lower,
   upper = log_model_ci_upper,
   data = fsw_data_pv_recent_subgroup,
   sm = "OR",
@@ -263,3 +263,180 @@ forest(
   print.subgroup.name = FALSE
 )
 dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Load packages
+pacman::p_load("meta", "metafor", "readxl", "openxlsx", "tidyverse", "kableExtra", "robumeta", "clubSandwich")
+
+# Set working directory
+setwd("C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence")
+
+# List of dataframes to process
+dataframes_to_process <- list(
+  fsw_data_pv_ever = fsw_data_pv_ever,
+  fsw_data_pv_recent = fsw_data_pv_recent,
+  fsw_data_sv_ever = fsw_data_sv_ever,
+  fsw_data_sv_recent = fsw_data_sv_recent,
+  fsw_data_psv_ever = fsw_data_psv_ever,
+  fsw_data_psv_recent = fsw_data_psv_recent
+)
+
+# Master list to store subgroup dataframes for all main dataframes
+all_subgroup_dataframes <- list()
+
+# Loop through each dataframe in the list
+for (df_name in names(dataframes_to_process)) {
+  current_df <- dataframes_to_process[[df_name]]
+  
+  # Create a list to store subgroup dataframes for the current dataframe
+  subgroup_dataframes <- list()
+  
+  # Loop through each column in subgroup_columns
+  for (column in subgroup_columns) {
+    # Get unique levels of the current column
+    unique_levels <- unique(current_df[[column]])
+    
+    # Debug: Print the current dataframe, column, and its unique levels
+    message(paste("Processing dataframe:", df_name, "column:", column))
+    print(unique_levels)
+    
+    # Loop through each level of the current column
+    for (level in unique_levels) {
+      # Filter the dataframe for the current level
+      filtered_df <- current_df %>% filter(.data[[column]] == level)
+      
+      # Assign the filtered dataframe to the list with a meaningful name
+      dataframe_name <- paste0(df_name, "_", column, "_", level)
+      subgroup_dataframes[[dataframe_name]] <- filtered_df
+    }
+  }
+  
+  # Store the subgroup dataframes list in the master list
+  all_subgroup_dataframes[[df_name]] <- subgroup_dataframes
+}
+
+# Assign each dataframe to the global environment (optional)
+for (df_name in names(all_subgroup_dataframes)) {
+  for (subgroup_name in names(all_subgroup_dataframes[[df_name]])) {
+    assign(subgroup_name, all_subgroup_dataframes[[df_name]][[subgroup_name]])
+  }
+}
+
+# Print the names of all created dataframes
+message("Created dataframes: ", paste(unlist(lapply(all_subgroup_dataframes, names)), collapse = ", "))
+
+# Create an empty dataframe to store subgroup results
+fsw_data_subgroup_results <- data.frame(
+  subgroup_level = character(),
+  subgroup = character(),
+  model_coef = numeric(),
+  model_ci_lower = numeric(),
+  model_ci_upper = numeric(),
+  studies = numeric(),
+  estimates = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# Loop through each subgroup dataframe to fit models and store results
+for (df_name in names(all_subgroup_dataframes)) {
+  for (subgroup_name in names(all_subgroup_dataframes[[df_name]])) {
+    filtered_df <- all_subgroup_dataframes[[df_name]][[subgroup_name]]
+    
+    # Skip if the dataframe is empty
+    if (nrow(filtered_df) == 0) {
+      message(paste("Skipping dataframe:", subgroup_name, "- it is empty."))
+      next
+    }
+    
+    # Check for missing columns and attempt to create them
+    if (!"study_num" %in% colnames(filtered_df) || !"effect_num" %in% colnames(filtered_df)) {
+      message(paste("Creating study_num and effect_num for dataframe:", subgroup_name))
+      filtered_df <- create_study_effect_nums(filtered_df)
+      filtered_df <- filtered_df %>% filter(use == "yes")
+    }
+    
+    # Check if effect size columns are missing
+    if (!"effect_best_var_ln" %in% colnames(filtered_df) || !"effect_best_ln" %in% colnames(filtered_df)) {
+      message(paste("Skipping dataframe:", subgroup_name, "- missing effect size columns."))
+      next
+    }
+    
+    # Create a covariance matrix assuming constant sampling correlation
+    rho <- 0.6
+    tryCatch({
+      if (nrow(filtered_df) > 1) {
+        # Fit a multilevel random effects model using `rma.mv` from metafor
+        V_mat <- impute_covariance_matrix(filtered_df$effect_best_var_ln,
+                                          cluster = filtered_df$study_num,
+                                          r = rho,
+                                          smooth_vi = TRUE)
+        
+        result <- rma.mv(yi = filtered_df$effect_best_ln,  # Specify the effect size column
+                         V = V_mat, 
+                         random = ~ 1 | study_num / effect_num, 
+                         data = filtered_df, 
+                         sparse = TRUE)
+        
+        # Extract model results
+        coef <- exp(coef(result))  # Exponentiated coefficient
+        ci_lower <- exp(result$ci.lb)  # Lower bound of confidence interval
+        ci_upper <- exp(result$ci.ub)  # Upper bound of confidence interval
+      } else {
+        # Handle cases where k == 1
+        coef <- exp(filtered_df$effect_best_ln)
+        ci_lower <- exp(filtered_df$effect_best_ln - 1.96 * sqrt(filtered_df$effect_best_var_ln))
+        ci_upper <- exp(filtered_df$effect_best_ln + 1.96 * sqrt(filtered_df$effect_best_var_ln))
+      }
+      
+      # Count the number of unique studies and estimates
+      num_studies <- length(unique(filtered_df$study_num))
+      num_estimates <- nrow(filtered_df)
+      
+      # Append the results to the results dataframe
+      fsw_data_subgroup_results <- rbind(
+        fsw_data_subgroup_results,
+        data.frame(
+          subgroup_level = sub("^[^_]*_", "", subgroup_name),
+          subgroup = sub("^(.*?)_.*$", "\\1", subgroup_name),
+          model_coef = coef,
+          model_ci_lower = ci_lower,
+          model_ci_upper = ci_upper,
+          studies = num_studies,
+          estimates = num_estimates,
+          stringsAsFactors = FALSE
+        )
+      )
+    }, error = function(e) {
+      message(paste("Error processing dataframe:", subgroup_name))
+      message(e)
+    })
+  }
+}
+
+# Drop rows with missing values
+fsw_data_subgroup_results <- fsw_data_subgroup_results %>%
+  drop_na()
+
+# Log-transform the results
+fsw_data_subgroup_results <- fsw_data_subgroup_results %>%
+  mutate(
+    log_model_coef = log(model_coef),
+    log_model_ci_lower = log(model_ci_lower),
+    log_model_ci_upper = log(model_ci_upper)
+  )
+
+# View the final results dataframe
+View(fsw_data_subgroup_results)
