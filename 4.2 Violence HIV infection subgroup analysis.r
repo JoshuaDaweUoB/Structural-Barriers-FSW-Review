@@ -64,7 +64,8 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
                          random = ~ 1 | study_num / effect_num, 
                          data = filtered_df, 
                          sparse = TRUE,
-                         control = list(optimizer = "nlminb", maxiter = 1000, method = "BFGS"))
+                         control = list(optimizer = "nlminb", maxiter = 1000, stepadj = 0.5, method = "BFGS",
+                         method = "REML"))
         coef <- exp(coef(result))
         ci_lower <- exp(result$ci.lb)
         ci_upper <- exp(result$ci.ub)
