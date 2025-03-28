@@ -5,7 +5,7 @@ pacman::p_load("meta", "metafor", "readxl", "openxlsx", "tidyverse", "kableExtra
 setwd("C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence")
 
 # lists for loops and functions
-subgroup_columns <- c("ldc_bin", "lmic_bin", "hiv_decrim", "sw_decrim", "pre_2016", "recruitment", "perpetrator", "who_region", "rob_score_3cat")
+subgroup_columns <- c("ldc_bin", "lmic_bin", "hiv_decrim", "sw_decrim", "gbv_law", "pre_2016", "recruitment", "perpetrator", "who_region", "rob_score_3cat")
 
 # Define a reusable function for processing, modeling, and plotting subgroups
 process_and_plot <- function(data, data_name, output_plot_filename) {
@@ -51,17 +51,20 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
     if (!"effect_best_var_ln" %in% colnames(filtered_df) || !"effect_best_ln" %in% colnames(filtered_df)) next
     
     rho <- 0.6
+   
     tryCatch({
       if (nrow(filtered_df) > 1) {
         V_mat <- impute_covariance_matrix(filtered_df$effect_best_var_ln,
                                           cluster = filtered_df$study_num,
                                           r = rho,
                                           smooth_vi = TRUE)
+                                          
         result <- rma.mv(yi = filtered_df$effect_best_ln,
                          V = V_mat, 
                          random = ~ 1 | study_num / effect_num, 
                          data = filtered_df, 
-                         sparse = TRUE)
+                         sparse = TRUE,
+                         control = list(optimizer = "nlminb", maxiter = 1000, method = "BFGS"))
         coef <- exp(coef(result))
         ci_lower <- exp(result$ci.lb)
         ci_upper <- exp(result$ci.ub)
@@ -128,17 +131,17 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
     subgroup_level == "region_European Region" ~ "European Region",
     subgroup_level == "region_Eastern Mediterranean Region" ~ "Eastern Mediterranean Region",
     subgroup_level == "region_Western Pacific Region" ~ "Western Pacific Region",
-    subgroup_level == "score_Good" ~ "Good",
-    subgroup_level == "score_Very good" ~ "Very good",
-    subgroup_level == "score_Satisfactory" ~ "Satisfactory",
-    subgroup_level == "score_Unsatisfactory" ~ "Unsatisfactory",
+    subgroup_level == "score_3cat_Good/ very good" ~ "Good/very good",
+    subgroup_level == "score_3cat_Satisfactory" ~ "Satisfactory",
+    subgroup_level == "score_3cat_Unsatisfactory" ~ "Unsatisfactory",
     TRUE ~ subgroup_level
     )) %>%
     mutate(subgroup = case_when(
       subgroup == "ldc" ~ "Least developed country",
       subgroup == "lmic" ~ "Lower-middle income country",
       subgroup == "hiv" ~ "HIV decriminalisation",
-      subgroup == "gbv" ~ "Gender-based violence law",
+      subgroup == "gbv" ~ "Gender-based violence laws",
+      subgroup == "sw" ~ "Decriminalised sex work",
       subgroup == "pre" ~ "Published before 2016",
       subgroup == "recruitment" ~ "Recruitment",
       subgroup == "perpetrator" ~ "Perpetrator",
