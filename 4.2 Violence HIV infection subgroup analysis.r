@@ -5,7 +5,7 @@ pacman::p_load("meta", "metafor", "readxl", "openxlsx", "tidyverse", "kableExtra
 setwd("C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence")
 
 # lists for loops and functions
-subgroup_columns <- c("ldc_bin", "lmic_bin", "hiv_decrim", "gbv_law", "pre_2016", "recruitment", "perpetrator", "who_region", "rob_score")
+subgroup_columns <- c("ldc_bin", "lmic_bin", "hiv_decrim", "sw_decrim", "pre_2016", "recruitment", "perpetrator", "who_region", "rob_score_3cat")
 
 # Define a reusable function for processing, modeling, and plotting subgroups
 process_and_plot <- function(data, data_name, output_plot_filename) {
