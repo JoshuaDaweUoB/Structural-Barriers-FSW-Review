@@ -29,7 +29,7 @@ process_and_plot(
 process_and_plot(
   data = fsw_data_sv_ever,
   data_name = "fsw_data_sv_ever",
-  output_plot_filename = "Plots/overall plots/ever_sv_subgroup.png"
+  output_plot_filename = "Plots/subgroups/ever_sv_subgroup.png"
 )
 
 # Call the function for "recently exposed to physical and/or sexual violence"

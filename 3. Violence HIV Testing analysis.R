@@ -361,7 +361,7 @@ dev.off()
 filtered_df <- fsw_data_test %>%
   filter(exposure_tf_bin == "Recent", use == "yes")
 
-# Call the function for "ever exposed to physical and/or sexual violence"
+# Call the function for "recent violence"
 process_and_plot(
   data = filtered_df,
   data_name = "filtered_df",
@@ -371,20 +371,11 @@ process_and_plot(
 filtered_df <- fsw_data_test %>%
   filter(exposure_tf_bin == "Ever", use == "yes")
 
-# Call the function for "ever exposed to physical and/or sexual violence"
+# Call the function for "ever violence"
 process_and_plot(
   data = filtered_df,
   data_name = "filtered_df",
   output_plot_filename = "Plots/subgroups/ever_test_subgroup.png"
 )
-
-
-
-
-
-
-
-
-
 
 

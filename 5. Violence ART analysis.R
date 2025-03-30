@@ -504,14 +504,32 @@ for (analysis in analyses) {
 
 ## subgroup analyses
 
-filtered_df <- fsw_data_test %>%
-  filter(exposure_tf_bin == "Ever", use == "yes")
+filtered_df <- fsw_data_art_adherence %>%
+  filter(exposure_tf_bin == "Recent", use == "yes")
 
-# Call the function for "ever exposed to physical and/or sexual violence"
+# Call the function for "recent expoure to violence for ART adherence"
 process_and_plot(
   data = filtered_df,
   data_name = "filtered_df",
-  output_plot_filename = "Plots/subgroups/ever_test_subgroup.png"
+  output_plot_filename = "Plots/subgroups/recent_art_adherence_subgroup.png"
 )
 
+filtered_df <- fsw_data_art_uptake %>%
+  filter(exposure_tf_bin == "Recent", use == "yes")
 
+# Call the function for "recent expoure to violence for ART adherence"
+process_and_plot(
+  data = filtered_df,
+  data_name = "filtered_df",
+  output_plot_filename = "Plots/subgroups/recent_art_use_subgroup.png"
+)
+
+filtered_df <- fsw_data_art_uptake %>%
+  filter(exposure_tf_bin == "Ever", use == "yes")
+
+# Call the function for "recent expoure to violence for ART adherence"
+process_and_plot(
+  data = filtered_df,
+  data_name = "filtered_df",
+  output_plot_filename = "Plots/subgroups/ever_art_use_subgroup.png"
+)

@@ -345,3 +345,25 @@ perform_analysis <- function(df, analysis) {
 for (analysis in analyses) {
   perform_analysis(fsw_data_vs, analysis)
 }
+
+## subgroup analysis
+
+filtered_df <- fsw_data_vs %>%
+  filter(exposure_tf_bin == "Ever", use == "yes")
+
+# Call the function for "recent expoure to violence for VS"
+process_and_plot(
+  data = filtered_df,
+  data_name = "filtered_df",
+  output_plot_filename = "Plots/subgroups/ever_vs_subgroup.png"
+)
+
+filtered_df <- fsw_data_vs %>%
+  filter(exposure_tf_bin == "Recent", use == "yes")
+
+# Call the function for "recent expoure to violence for VS"
+process_and_plot(
+  data = filtered_df,
+  data_name = "filtered_df",
+  output_plot_filename = "Plots/subgroups/recent_vs_subgroup.png"
+)
