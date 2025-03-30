@@ -356,21 +356,27 @@ forest(result2,
 
 dev.off()  
 
-## LIC
+## subgroup analysis
 
+filtered_df <- fsw_data_test %>%
+  filter(exposure_tf_bin == "Recent", use == "yes")
 
-## recruitment method
+# Call the function for "ever exposed to physical and/or sexual violence"
+process_and_plot(
+  data = filtered_df,
+  data_name = "filtered_df",
+  output_plot_filename = "Plots/subgroups/recent_test_subgroup.png"
+)
 
-##perpetrator
+filtered_df <- fsw_data_test %>%
+  filter(exposure_tf_bin == "Ever", use == "yes")
 
-## year
-
-## ROB
-
-
-
-
-
+# Call the function for "ever exposed to physical and/or sexual violence"
+process_and_plot(
+  data = filtered_df,
+  data_name = "filtered_df",
+  output_plot_filename = "Plots/subgroups/ever_test_subgroup.png"
+)
 
 
 
