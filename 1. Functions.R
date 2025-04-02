@@ -88,7 +88,7 @@ create_study_effect_nums <- function(df) {
 ## subgroup function
 
 # lists for loops and functions
-subgroup_columns <- c("ldc_bin", "lmic_bin", "hiv_decrim", "sw_decrim", "gbv_law", "pre_2016", "recruitment", "perpetrator", "who_region", "rob_score_3cat")
+subgroup_columns <- c("ldc_bin", "lmic_bin", "who_region", "hiv_decrim", "sw_decrim", "gbv_law", "pre_2016", "recruitment", "perpetrator", "rob_score_3cat")
 
 # Define a reusable function for processing, modeling, and plotting subgroups
 process_and_plot <- function(data, data_name, output_plot_filename) {
@@ -141,14 +141,16 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
                                           cluster = filtered_df$study_num,
                                           r = rho,
                                           smooth_vi = TRUE)
-                                          
-        result <- rma.mv(yi = filtered_df$effect_best_ln,
-                         V = V_mat, 
-                         random = ~ 1 | study_num / effect_num, 
-                         data = filtered_df, 
-                         sparse = TRUE,
-                         control = list(optimizer = "optim", maxiter = 5000, method = "BFGS", stepadj = 0.5,
-                         method = "REML"))
+
+       result <- rma.mv(
+  yi = filtered_df$effect_best_ln,  # Specify the column for effect sizes
+  V = V_mat, 
+  random = ~ 1 | study_num / effect_num,
+  data = filtered_df,
+  control = list(optimizer = "optim", maxiter = 100000, method = "BFGS", stepadj = 0.1),
+  sparse = TRUE
+)
+                         
         coef <- exp(coef(result))
         ci_lower <- exp(result$ci.lb)
         ci_upper <- exp(result$ci.ub)
