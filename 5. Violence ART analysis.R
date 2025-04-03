@@ -517,7 +517,7 @@ process_and_plot(
 filtered_df <- fsw_data_art_uptake %>%
   filter(exposure_tf_bin == "Recent", use == "yes")
 
-# Call the function for "recent expoure to violence for ART adherence"
+# Call the function for "recent expoure to violence for ART use"
 process_and_plot(
   data = filtered_df,
   data_name = "filtered_df",
@@ -527,7 +527,7 @@ process_and_plot(
 filtered_df <- fsw_data_art_uptake %>%
   filter(exposure_tf_bin == "Ever", use == "yes")
 
-# Call the function for "recent expoure to violence for ART adherence"
+# Call the function for "recent expoure to violence for ART use"
 process_and_plot(
   data = filtered_df,
   data_name = "filtered_df",
