@@ -283,6 +283,3 @@ for (df_name in dfs_studies) {
 # Print the summary table
 print(summary_table)
 write_xlsx(summary_table, "Summary Table.xlsx")
-
-
-hi nicola
