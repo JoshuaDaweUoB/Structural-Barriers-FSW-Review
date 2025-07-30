@@ -34,14 +34,14 @@ var_names <- list(
 ## recent violence data 
 
 # Define the corresponding plot filenames for each analysis
-plot_filenames <- list(
+plot_filenames_recent <- list(
   unadj = "Plots/recent_unadj_test.png",
   adj = "Plots/recent_adj_test.png",
   best = "Plots/recent_best_test.png"
 )
 
-# Function to perform the analysis and create forest plots
-perform_analysis <- function(df, analysis) {
+# Function to perform the analysis and create forest plots for RECENT violence
+perform_analysis_recent <- function(df, analysis) {
  
   # Filter the dataframe
   filtered_df <- df %>% filter(exposure_tf_bin == "Recent", use == "yes", !is.na(.[[var_names[[analysis]]$est]]))
@@ -62,6 +62,7 @@ perform_analysis <- function(df, analysis) {
                    data = filtered_df,   
                    sparse = TRUE)       
   
+  print(paste("RECENT", analysis, "analysis:"))
   print(result)
   print(exp(coef(result)))
   
@@ -83,8 +84,8 @@ perform_analysis <- function(df, analysis) {
   result2$lower.random <- result$ci.lb
   result2$upper.random <- result$ci.ub
   
-  filename <- plot_filenames[[analysis]]
-  png(filename = filename, width = 45, height = 14, units = "cm", res = 600)
+  filename <- plot_filenames_recent[[analysis]]
+  png(filename = filename, width = 55, height = 14, units = "cm", res = 600)
   
   forest(result2,
          sortvar = filtered_df$study,
@@ -104,24 +105,24 @@ perform_analysis <- function(df, analysis) {
   dev.off()
 }
 
-# Loop over each analysis to perform the analysis and create forest plots
+# Loop over each analysis to perform the analysis and create forest plots for RECENT violence
 for (analysis in analyses) {
-  perform_analysis(fsw_data_test, analysis)
+  perform_analysis_recent(fsw_data_test, analysis)
 }
 
 ## lifetime violence data
 
 # Define the corresponding plot filenames for each analysis
-plot_filenames <- list(
+plot_filenames_ever <- list(
   unadj = "Plots/ever_unadj_test.png",
   adj = "Plots/ever_adj_test.png",
   best = "Plots/ever_best_test.png"
 )
 
-# Function to perform the analysis and create forest plots
-perform_analysis <- function(df, analysis, exposure) {
+# Function to perform the analysis and create forest plots for LIFETIME violence
+perform_analysis_ever <- function(df, analysis) {
   # Filter the dataframe
-  filtered_df <- df %>% filter(exposure_tf_bin == exposure, use == "yes", !is.na(.[[var_names[[analysis]]$est]]))
+  filtered_df <- df %>% filter(exposure_tf_bin == "Ever", use == "yes", !is.na(.[[var_names[[analysis]]$est]]))
   
   # Create study_num and effect_num columns
   filtered_df <- create_study_effect_nums(filtered_df)
@@ -139,6 +140,7 @@ perform_analysis <- function(df, analysis, exposure) {
                    data = filtered_df,   
                    sparse = TRUE)       
   
+  print(paste("EVER", analysis, "analysis:"))
   print(result)
   print(exp(coef(result)))
   
@@ -160,7 +162,7 @@ perform_analysis <- function(df, analysis, exposure) {
   result2$lower.random <- result$ci.lb
   result2$upper.random <- result$ci.ub
   
-  filename <- plot_filenames[[analysis]]
+  filename <- plot_filenames_ever[[analysis]]
   png(filename = filename, width = 45, height = 14, units = "cm", res = 600)
   
   forest(result2,
@@ -181,9 +183,9 @@ perform_analysis <- function(df, analysis, exposure) {
   dev.off()
 }
 
-# Loop over each analysis to perform the analysis and create forest plots for lifetime violence
+# Loop over each analysis to perform the analysis and create forest plots for EVER violence
 for (analysis in analyses) {
-  perform_analysis(fsw_data_test, analysis, "Ever")
+  perform_analysis_ever(fsw_data_test, analysis)
 }
 
 #### overall forest plot ####

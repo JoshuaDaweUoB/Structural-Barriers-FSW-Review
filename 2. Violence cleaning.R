@@ -33,8 +33,11 @@ fsw_data_art <- read_excel("All violence studies.xlsx", "ART data - All")
 # load vs data
 fsw_data_vs <- read_excel("All violence studies.xlsx", "VS data - All")
 
+# load other violence data
+fsw_data_other <- read_excel("All violence studies.xlsx", "Other violence - All")
+
 # define dataframes
-dfs <- c("fsw_data_test", "fsw_data_pv_ever", "fsw_data_pv_recent", "fsw_data_sv_ever", "fsw_data_sv_recent", "fsw_data_psv_ever", "fsw_data_psv_recent", "fsw_data_art", "fsw_data_vs")
+dfs <- c("fsw_data_test", "fsw_data_pv_ever", "fsw_data_pv_recent", "fsw_data_sv_ever", "fsw_data_sv_recent", "fsw_data_psv_ever", "fsw_data_psv_recent", "fsw_data_art", "fsw_data_vs", "fsw_data_other")
 
 # data cleaning
 
