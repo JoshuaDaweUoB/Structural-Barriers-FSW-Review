@@ -1,17 +1,19 @@
 # Load required packages
-pacman::p_load("readxl", "writexl", "tidyverse")
+pacman::p_load("readxl", "writexl", "tidyverse", "metafor")
 
+# sequence study ids
 fsw_data_all <- create_study_effect_nums(fsw_data_all)
 View(fsw_data_all)
 
 # Sort, group by study, and keep the first row of each group
-all_studies <- all_studies %>%
+all_studies <- fsw_data_all %>%
   arrange(study) %>%
   group_by(study) %>%
   mutate(sequence = row_number()) %>%
   ungroup() %>%
   filter(sequence == 1)
 
+# study characteristics
 all_studies <- all_studies %>%
   mutate(
     hiv_num = as.numeric(hiv_num),
@@ -98,15 +100,25 @@ study_design_table <- all_studies %>%
   count(`Study design`) %>%  # Use backticks for column names with spaces
   mutate(percentage = n / sum(n) * 100)  # Calculate percentages
 
+# Count the number of unique countries in all_studies
+num_unique_countries <- all_studies %>% summarise(unique_countries = n_distinct(country))
+print(num_unique_countries)
+
 # Descriptive table for "Publication type"
 pub_type_table <- all_studies %>%
   count(`Publication type`) %>%  # Use backticks for column names with spaces
   mutate(percentage = n / sum(n) * 100)  # Calculate percentages
 
+# Descriptive table for study quality
+study_quality_table <- all_studies %>%
+  count(`rob_score`) %>%
+  mutate(percentage = n / sum(n) * 100)
+  
 # Print the tables
 print(who_region_table)
 print(pub_type_table)
 print(study_design_table)
+print(study_quality_table)
 
 # Calculate total Sample size and total HIV (n)
 totals_table <- all_studies %>%
@@ -156,80 +168,123 @@ View(physical_or_sexual_violence_studies)
 
 # recent and lifetime violence
 
-# Load physical violence data
-fsw_data_pv_ever_studies <- read_excel("All violence studies.xlsx", "Physical violence - Ever") 
-fsw_data_pv_recent_studies <- read_excel("All violence studies.xlsx", "Physical violence - Recent") 
+# Physical violence studies
+fsw_data_pv_ever_studies   <- fsw_data_all %>% filter(exposure_tf_bin == "Ever", exposure_type == "Physical violence")
+fsw_data_pv_recent_studies <- fsw_data_all %>% filter(exposure_tf_bin == "Recent", exposure_type == "Physical violence")
 
-# Load sexual violence data
-fsw_data_sv_ever_studies<- read_excel("All violence studies.xlsx", "Sexual violence - Ever") 
-fsw_data_sv_recent_studies <- read_excel("All violence studies.xlsx", "Sexual violence - Recent") 
+# Sexual violence studies
+fsw_data_sv_ever_studies   <- fsw_data_all %>% filter(exposure_tf_bin == "Ever", exposure_type == "Sexual violence")
+fsw_data_sv_recent_studies <- fsw_data_all %>% filter(exposure_tf_bin == "Recent", exposure_type == "Sexual violence")
 
-# Load physical & sexual violence data
-fsw_data_psv_ever_studies <- read_excel("All violence studies.xlsx", "Physical or sexual - Ever") 
-fsw_data_psv_recent_studies <- read_excel("All violence studies.xlsx", "Physical or sexual - Recent") 
+# Physical and/or sexual violence studies
+fsw_data_psv_ever_studies   <- fsw_data_all %>% filter(exposure_tf_bin == "Ever", exposure_type == "Physical and/or sexual violence")
+fsw_data_psv_recent_studies <- fsw_data_all %>% filter(exposure_tf_bin == "Recent", exposure_type == "Physical and/or sexual violence")
+
+# Other violence studies
+fsw_data_other_ever_studies   <- fsw_data_all %>% filter(exposure_tf_bin == "Ever", exposure_type == "Other violence")
+fsw_data_other_recent_studies <- fsw_data_all %>% filter(exposure_tf_bin == "Recent", exposure_type == "Other violence")
 
 # create list of dataframes
-dfs_studies <- c("fsw_data_pv_ever_studies", "fsw_data_pv_recent_studies", "fsw_data_sv_ever_studies", "fsw_data_sv_recent_studies", "fsw_data_psv_ever_studies", "fsw_data_psv_recent_studies")
+dfs_studies <- c(
+  "fsw_data_pv_ever_studies", "fsw_data_pv_recent_studies",
+  "fsw_data_sv_ever_studies", "fsw_data_sv_recent_studies",
+  "fsw_data_psv_ever_studies", "fsw_data_psv_recent_studies",
+  "fsw_data_other_ever_studies", "fsw_data_other_recent_studies"
+)
 
-# Loop over the list of dataframe names
+# keep relevant rows
 for (df_name in dfs_studies) {
-  # Access the dataframe by its name
   df <- get(df_name)
-  
-  # Convert exposed_num and sample_size to numeric, treating "NA" strings as NA
+  # Keep only the specified columns
   df <- df %>%
-    mutate(
-      exposed_num = as.numeric(ifelse(exposed_num == "NA", NA, exposed_num)),
-      sample_size = as.numeric(ifelse(sample_size == "NA", NA, sample_size))
-    ) %>%
-    # Filter rows with no missing values for exposed_num and sample_size
-    filter(!is.na(exposed_num) & !is.na(sample_size)) %>%
-    # Create a new variable exposed_perc2
-    mutate(
-      exposed_perc2 = exposed_num / sample_size * 100  # Calculate percentage
-    ) %>%
-    arrange(study, desc(exposed_perc)) %>% # Sort by 'study' and then by 'exposed_perc' in descending order
-    group_by(study) %>% # Group by 'study'
-    mutate(sequence = row_number()) %>% # Create a sequence within each group
-    ungroup() %>%
-    filter(sequence == 1) %>% # Keep only rows where sequence equals 1
-    select(study, exposed_num, exposed_perc, sample_size, exposed_perc2) # Keep specified columns
-  
-  # Assign the processed dataframe back to its original name
-  assign(df_name, df)
+    select(study, exposure_definition_short, perpetrator, exposed_num, exposed_perc, sample_size)
+  assign(df_name, df, envir = .GlobalEnv)
 }
 
-# Initialize an empty dataframe to store the summary results
+# keep one type of violence per study
+for (df_name in dfs_studies) {
+  df <- get(df_name)
+  # Ensure exposed_num is numeric for sequencing
+  df$exposed_num <- as.numeric(df$exposed_num)
+  df <- df %>%
+    arrange(study, exposed_num) %>%
+    group_by(study, exposed_num) %>%
+    mutate(sequence = row_number()) %>%
+    ungroup() %>%
+    filter(sequence == 1) %>%
+    select(-sequence)
+  assign(df_name, df, envir = .GlobalEnv)
+}
+
+# create table for sheet
 summary_table <- data.frame(
   dataframe = character(),
+  num_studies = numeric(),
+  num_estimates = numeric(),
   total_exposed_num = numeric(),
   total_sample_size = numeric(),
   exposed_percentage = numeric(),
+  pooled_prev = numeric(),
+  pooled_prev_ci_lb = numeric(),
+  pooled_prev_ci_ub = numeric(),
+  I2 = numeric(),
   stringsAsFactors = FALSE
 )
 
-# Loop over the list of dataframe names
+# pooled proportions table
 for (df_name in dfs_studies) {
-  # Access the dataframe by its name
   df <- get(df_name)
-  
-  # Calculate the totals
-  total_exposed_num <- sum(df$exposed_num, na.rm = TRUE)  # Total exposed_num
-  total_sample_size <- sum(df$sample_size, na.rm = TRUE)  # Total sample_size
-  exposed_percentage <- (total_exposed_num / total_sample_size) * 100  # Percentage
-  
-  # Add the results to the summary table
+  df$exposed_num <- as.numeric(df$exposed_num)
+  df$sample_size <- as.numeric(df$sample_size)
+  df <- df[!is.na(df$exposed_num) & !is.na(df$sample_size) & df$sample_size > 0 & df$exposed_num >= 0, ]
+
+  total_exposed_num <- sum(df$exposed_num)
+  total_sample_size <- sum(df$sample_size)
+  exposed_percentage <- (total_exposed_num / total_sample_size) * 100
+  num_studies <- length(unique(df$study))
+  num_estimates <- nrow(df)
+
+  if (nrow(df) >= 2) {
+    escalc_res <- escalc(
+      measure = "PLO",
+      xi = as.numeric(df$exposed_num),
+      ni = as.numeric(df$sample_size)
+    )
+    escalc_res$effect_num <- seq_len(nrow(escalc_res))
+    rma_res <- rma.mv(
+      yi, vi,
+      random = ~ 1 | study/effect_num,
+      data = cbind(escalc_res, study = df$study)
+    )
+    pred <- predict(rma_res, transf=transf.ilogit)
+    pooled_prev <- pred$pred
+    pooled_prev_ci <- c(pred$ci.lb, pred$ci.ub)
+    # Manual I2 calculation for between-study variance
+    var_comp <- as.numeric(rma_res$sigma2)
+    total_var <- sum(var_comp) + mean(rma_res$vi)
+    I2 <- 100 * var_comp[1] / total_var
+  } else {
+    pooled_prev <- NA
+    pooled_prev_ci <- c(NA, NA)
+    I2 <- NA
+  }
+
   summary_table <- rbind(
     summary_table,
     data.frame(
       dataframe = df_name,
+      num_studies = num_studies,
+      num_estimates = num_estimates,
       total_exposed_num = total_exposed_num,
       total_sample_size = total_sample_size,
-      exposed_percentage = exposed_percentage
+      exposed_percentage = exposed_percentage,
+      pooled_prev = pooled_prev,
+      pooled_prev_ci_lb = pooled_prev_ci[1],
+      pooled_prev_ci_ub = pooled_prev_ci[2],
+      I2 = I2
     )
   )
 }
 
-# Print the summary table
 print(summary_table)
 write_xlsx(summary_table, "Summary Table.xlsx")
