@@ -27,21 +27,21 @@ exposures <- c("recent", "ever")
 # constant sampling correlation
 rho <- 0.6
 
-# Define the corresponding variable names for each analysis
+# variable names for each analysis
 var_names <- list(
   unadj = list(est = "unadj_est_ln", var = "unadj_var_ln", lower = "un_lower_ln", upper = "un_upper_ln"),
   adj = list(est = "adj_est_ln", var = "adj_var_ln", lower = "adj_lower_ln", upper = "adj_upper_ln"),
   best = list(est = "effect_best_ln", var = "effect_best_var_ln", lower = "effect_best_lower_ln", upper = "effect_best_upper_ln")
 )
 
-# Define the corresponding dataframes for each exposure and type of violence
+# dataframes for each exposure and type of violence
 dataframes <- list(
   physical = list(recent = "fsw_data_pv_recent", ever = "fsw_data_pv_ever"),
   sexual = list(recent = "fsw_data_sv_recent", ever = "fsw_data_sv_ever"),
   physical_sexual = list(recent = "fsw_data_psv_recent", ever = "fsw_data_psv_ever")
 )
 
-# Define the corresponding plot filenames for each analysis, exposure, and type of violence
+# filenames for each analysis, exposure, and type of violence
 plot_filenames <- list(
   physical = list(
     unadj = list(recent = "Plots/pv_recent_unadj_csc.png", ever = "Plots/pv_ever_unadj_csc.png"),
@@ -60,7 +60,7 @@ plot_filenames <- list(
   )
 )
 
-# Define the corresponding left columns and labels for each exposure
+# left columns and labels for each exposure
 leftcols <- list(
   recent = leftcols_recent,
   ever = leftcols_lifetime
@@ -72,26 +72,27 @@ leftlabs <- list(
 
 ## any violence forest plots
 
-# Function to perform the analysis and create forest plots with subgroups for exposure_type
+# function to analyse violence overall with subgroups for exposure_type
 perform_all_violence_analysis <- function(df, analysis, exposure) {
-  # Filter the dataframe
+  
+  # filter to infection
   filtered_df <- df %>%
     filter(outcome == "HIV prevalence", exposure_tf_bin == exposure) %>%
     filter(!is.na(.data[[var_names[[analysis]]$est]]))
    
-  # Create study_num and effect_num columns
+  # study_num and effect_num columns
   filtered_df <- filtered_df %>%
     arrange(exposure_type, study) %>%
     mutate(effect_num = row_number()) %>%
     mutate(study_num = cumsum(!duplicated(study))) 
 
-  # Create a covariance matrix assuming constant sampling correlation
+  # covariance matrix assuming constant sampling correlation
   V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
                                     cluster = filtered_df$study_num,
                                     r = rho,
                                     smooth_vi = TRUE)
   
-  # Fit a multilevel random effects model using `rma.mv` from metafor
+  # multilevel random effects model using `rma.mv` from metafor
   result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
                    V = V_mat, 
                    random = ~ 1 | study_num / effect_num,
@@ -122,9 +123,9 @@ perform_all_violence_analysis <- function(df, analysis, exposure) {
   result2$lower.random <- result$ci.lb
   result2$upper.random <- result$ci.ub
   
-  # Ensure the folder exists
-  dir.create("Plots/all_violence", recursive = TRUE, showWarnings = FALSE)
-  filename <- paste0("Plots/all_violence/all_violence_", tolower(exposure), "_", analysis, ".png")
+  # create folder 
+  dir.create("Plots/prevalence/all violence", recursive = TRUE, showWarnings = FALSE)
+  filename <- paste0("Plots/prevalence/all violence/all_violence_", tolower(exposure), "_", analysis, ".png")
   
   png(filename = filename, width = 60, height = 55, units = "cm", res = 600)
   
@@ -146,33 +147,33 @@ perform_all_violence_analysis <- function(df, analysis, exposure) {
     print.subgroup.name = TRUE # show subgroup names
   )
   
-  dev.off()
-  message(paste("Forest plot saved as:", filename))
-}
+  dev.off()}
 
-# Example usage for Recent and Ever exposures:
+# run for recent and ever
 for (exposure in c("Recent", "Ever")) {
   for (analysis in analyses) {
     perform_all_violence_analysis(fsw_data_prev, analysis, exposure)
   }
 }
 
-# Function to perform the analysis and create forest plots
+## violence by type
+
+# function to analyse by violent type and create forest plots
 perform_analysis <- function(df, analysis, exposure, violence_type) {
-  # Filter the dataframe
+  # filter the dataframe
   filtered_df <- df %>% filter(outcome == "HIV prevalence")
   filtered_df <- filtered_df %>% filter(!is.na(filtered_df[[var_names[[analysis]]$est]]))
   
-  # Create study_num and effect_num columns
+  # study_num and effect_num columns
   filtered_df <- create_study_effect_nums(filtered_df)
   
-  # Create a covariance matrix assuming constant sampling correlation
+  # covariance matrix assuming constant sampling correlation
   V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
                                     cluster = filtered_df$study_num,
                                     r = rho,
                                     smooth_vi = TRUE)
   
-  # Fit a multilevel random effects model using `rma.mv` from metafor
+  # multilevel random effects model using `rma.mv` from metafor
   result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
                    V = V_mat, 
                    random = ~ 1 | study_num / effect_num,
@@ -200,7 +201,15 @@ perform_analysis <- function(df, analysis, exposure, violence_type) {
   result2$lower.random <- result$ci.lb
   result2$upper.random <- result$ci.ub
   
-  filename <- plot_filenames[[violence_type]][[analysis]][[exposure]]
+  # create folder
+  dir.create("Plots/prevalence/violence by type", recursive = TRUE, showWarnings = FALSE)
+  
+  # filename
+  filename <- paste0(
+    "Plots/prevalence/violence by type/",
+    violence_type, "_", exposure, "_", analysis, ".png"
+  )
+  
   png(filename = filename, width = 45, height = 22, units = "cm", res = 600)
   
   forest(result2,
@@ -221,7 +230,7 @@ perform_analysis <- function(df, analysis, exposure, violence_type) {
   dev.off()
 }
 
-# Loop over each type of violence, analysis, and exposure to perform the analysis and create forest plots
+# loop over each type of violence and create forest plots
 for (violence_type in names(dataframes)) {
   for (analysis in analyses) {
     for (exposure in exposures) {
@@ -233,31 +242,31 @@ for (violence_type in names(dataframes)) {
 
 ## other violence types
 
-# Function to create forest plots for other violence types, separately for Recent and Ever
+# function for other violence types
 create_other_violence_plots <- function(data, outcome_filter = "HIV prevalence") {
   for (exposure_tf in c("Recent", "Ever")) {
     for (analysis in analyses) {
-      # Filter the dataframe
+      # filter
       filtered_df <- data %>%
         filter(outcome == outcome_filter, exposure_tf_bin == exposure_tf) %>%
         filter(!is.na(.data[[var_names[[analysis]]$est]]))
       
-      # Skip if not enough data
+      # skip if number of studies is less than 2
       if (nrow(filtered_df) < 2) {
         message(paste("Not enough data for", analysis, "analysis,", exposure_tf, "exposure (n =", nrow(filtered_df), ")"))
         next
       }
 
-      # Create study_num and effect_num columns
+      # study_num and effect_num columns
       filtered_df <- create_study_effect_nums(filtered_df)
       
-      # Create a covariance matrix assuming constant sampling correlation
+      # covariance matrix assuming constant sampling correlation
       V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
                                         cluster = filtered_df$study_num,
                                         r = rho,
                                         smooth_vi = TRUE)
       
-      # Fit a multilevel random effects model using `rma.mv` from metafor
+      # multilevel random effects model
       result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
                        V = V_mat, 
                        random = ~ 1 | study_num / effect_num,
@@ -268,7 +277,7 @@ create_other_violence_plots <- function(data, outcome_filter = "HIV prevalence")
       print(result)
       print(exp(coef(result)))
       
-      # Create metagen object for forest plot
+      # forest plot
       result2 <- metagen(
         TE = filtered_df[[var_names[[analysis]]$est]],
         lower = filtered_df[[var_names[[analysis]]$lower]],
@@ -285,15 +294,15 @@ create_other_violence_plots <- function(data, outcome_filter = "HIV prevalence")
       
       print(summary(result2))
       
-      # Update the metagen object with rma.mv results
+      # update with rma.mv results
       result2$TE.random <- result$b
       result2$lower.random <- result$ci.lb
       result2$upper.random <- result$ci.ub
       
-      # Create forest plot filename
-      filename <- paste0("Plots/hiv_infection_other_violence_", tolower(exposure_tf), "_", analysis, ".png")
+      # forest plot filename
+      filename <- paste0("Plots/prevalence/other violence/hiv_infection_other_violence_", tolower(exposure_tf), "_", analysis, ".png")
       
-      # Create forest plot
+      # forest plot
       png(filename = filename, width = 45, height = 14, units = "cm", res = 600)
       
       forest(
@@ -319,7 +328,7 @@ create_other_violence_plots <- function(data, outcome_filter = "HIV prevalence")
   }
 }
 
-# Call the function to create all plots for both Recent and Ever
+# function to create all plots for both Recent and Ever
 create_other_violence_plots(fsw_data_other)
 
 ## subgroup analysis 

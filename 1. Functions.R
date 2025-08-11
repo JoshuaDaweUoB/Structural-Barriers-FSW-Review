@@ -90,18 +90,18 @@ create_study_effect_nums <- function(df) {
 # lists for loops and functions
 subgroup_columns <- c("ldc_bin", "lmic_bin", "who_region", "hiv_decrim", "sw_decrim", "gbv_law", "pre_2016", "recruitment", "perpetrator", "rob_score_3cat")
 
-# Define a reusable function for processing, modeling, and plotting subgroups
+# function for processing, modeling, and plotting subgroups
 process_and_plot <- function(data, data_name, output_plot_filename) {
-  # Create a list to store the dataframes for all subgroup columns
+  # list to store the dataframes
   all_subgroup_dataframes <- list()
   
-  # Loop through each column in subgroup_columns
+  # loop through subgroup_columns
   for (column in subgroup_columns) {
     unique_levels <- unique(data[[column]])
     message(paste("Processing column:", column))
     print(unique_levels)
     
-    # Loop through each level of the current column
+    # loop through levels of current column
     for (level in unique_levels) {
       filtered_df <- data %>% filter(.data[[column]] == level)
       dataframe_name <- paste0(data_name, "_", column, "_", level)
@@ -109,7 +109,7 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
     }
   }
   
-  # Create an empty dataframe to store subgroup results
+  # empty dataframe to store subgroup results
   subgroup_results <- data.frame(
     subgroup_level = character(),
     subgroup = character(),
@@ -121,7 +121,7 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
     stringsAsFactors = FALSE
   )
   
-  # Loop through each subgroup dataframe to fit models
+  # loop through subgroup dataframes
   for (name in names(all_subgroup_dataframes)) {
     filtered_df <- all_subgroup_dataframes[[name]]
     if (nrow(filtered_df) == 0) next

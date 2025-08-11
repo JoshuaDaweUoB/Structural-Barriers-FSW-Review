@@ -18,13 +18,13 @@ rightlabs = c("Estimate", "95% CI")
 
 #### Multilevel random effects model with constant sampling correlation ####
 
-# Constant sampling correlation
+# constant sampling correlation
 rho <- 0.6
 
-# Define the different analyses
+# list of model types
 analyses <- c("unadj", "adj", "best")
 
-# Define the corresponding variable names for each analysis
+# variable names for each analysis
 var_names <- list(
   unadj = list(est = "unadj_est_ln", var = "unadj_var_ln", lower = "un_lower_ln", upper = "un_upper_ln"),
   adj = list(est = "adj_est_ln", var = "adj_var_ln", lower = "adj_lower_ln", upper = "adj_upper_ln"),
@@ -33,29 +33,22 @@ var_names <- list(
 
 ## recent violence data 
 
-# Define the corresponding plot filenames for each analysis
-plot_filenames_recent <- list(
-  unadj = "Plots/recent_unadj_test.png",
-  adj = "Plots/recent_adj_test.png",
-  best = "Plots/recent_best_test.png"
-)
-
-# Function to perform the analysis and create forest plots for RECENT violence
+# function for recent violence
 perform_analysis_recent <- function(df, analysis) {
  
-  # Filter the dataframe
-  filtered_df <- df %>% filter(exposure_tf_bin == "Recent", use == "yes", !is.na(.[[var_names[[analysis]]$est]]))
+  # filter
+  filtered_df <- df %>% filter(exposure_tf_bin == "Recent", !is.na(.[[var_names[[analysis]]$est]]))
   
-  # Create study_num and effect_num columns
+  # study_num and effect_num columns
   filtered_df <- create_study_effect_nums(filtered_df)
 
-  # Create a covariance matrix assuming constant sampling correlation
+  # covariance matrix assuming constant sampling correlation
   V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
                                     cluster = filtered_df$study_num,
                                     r = rho,
                                     smooth_vi = TRUE)
   
-  # Fit a multilevel random effects model using `rma.mv` from metafor
+  # multilevel random effects
   result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
                    V = V_mat, 
                    random = ~ 1 | study_num / effect_num,
@@ -84,8 +77,8 @@ perform_analysis_recent <- function(df, analysis) {
   result2$lower.random <- result$ci.lb
   result2$upper.random <- result$ci.ub
   
-  filename <- plot_filenames_recent[[analysis]]
-  png(filename = filename, width = 55, height = 14, units = "cm", res = 600)
+  filename <- paste0("Plots/testing/", analysis, "_recent_testing.png")
+  png(filename = filename, width = 45, height = 14, units = "cm", res = 600)
   
   forest(result2,
          sortvar = filtered_df$study,
@@ -105,35 +98,28 @@ perform_analysis_recent <- function(df, analysis) {
   dev.off()
 }
 
-# Loop over each analysis to perform the analysis and create forest plots for RECENT violence
+# loop over each analysis
 for (analysis in analyses) {
   perform_analysis_recent(fsw_data_test, analysis)
 }
 
 ## lifetime violence data
 
-# Define the corresponding plot filenames for each analysis
-plot_filenames_ever <- list(
-  unadj = "Plots/ever_unadj_test.png",
-  adj = "Plots/ever_adj_test.png",
-  best = "Plots/ever_best_test.png"
-)
-
-# Function to perform the analysis and create forest plots for LIFETIME violence
+# function for lifetime violence
 perform_analysis_ever <- function(df, analysis) {
-  # Filter the dataframe
-  filtered_df <- df %>% filter(exposure_tf_bin == "Ever", use == "yes", !is.na(.[[var_names[[analysis]]$est]]))
+  # filter
+  filtered_df <- df %>% filter(exposure_tf_bin == "Ever", !is.na(.[[var_names[[analysis]]$est]]))
   
-  # Create study_num and effect_num columns
+  # study_num and effect_num columns
   filtered_df <- create_study_effect_nums(filtered_df)
 
-  # Create a covariance matrix assuming constant sampling correlation
+  # covariance matrix assuming constant sampling correlation
   V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
                                     cluster = filtered_df$study_num,
                                     r = rho,
                                     smooth_vi = TRUE)
   
-  # Fit a multilevel random effects model using `rma.mv` from metafor
+  # multilevel random effects model using `rma.mv` from metafor
   result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
                    V = V_mat, 
                    random = ~ 1 | study_num / effect_num,
@@ -162,7 +148,7 @@ perform_analysis_ever <- function(df, analysis) {
   result2$lower.random <- result$ci.lb
   result2$upper.random <- result$ci.ub
   
-  filename <- plot_filenames_ever[[analysis]]
+  filename <- paste0("Plots/testing/", analysis, "_ever_testing.png")
   png(filename = filename, width = 45, height = 14, units = "cm", res = 600)
   
   forest(result2,
@@ -183,54 +169,10 @@ perform_analysis_ever <- function(df, analysis) {
   dev.off()
 }
 
-# Loop over each analysis to perform the analysis and create forest plots for EVER violence
+# loop over each analysis
 for (analysis in analyses) {
   perform_analysis_ever(fsw_data_test, analysis)
 }
-
-#### overall forest plot ####
-
-## load dataframe
-
-summary_violence_test <- read_excel("Violence estimates.xlsx", "Testing") 
-
-## forest plot
-
-summary_hiv_violence_test  <- metagen(TE = effect_ln,
-                                      lower = lower_ln,
-                                      upper = upper_ln,
-                                      studlab = name,
-                                      data = summary_violence_test,
-                                      sm = "OR",
-                                      method.tau = "DL",
-                                      comb.fixed = FALSE,
-                                      comb.random = FALSE, 
-                                      backtransf = TRUE,
-                                      byvar = name,
-                                      text.random = "Overall")
-
-summary(summary_hiv_violence_test) 
-
-filename <- paste0("Plots/overall plots/violence_test_overall.png")
-png(filename = filename, width = 25, height = 14, units = "cm", res = 600)
-
-summary_hiv_violence_test <- forest(summary_hiv_violence_test, 
-                                    sortvar = name,
-                                    xlim=c(0.2, 4),             
-                                    leftcols = c("Adjust", "studies", "estimates"), 
-                                    leftlabs = c("Model type", "Studies", "Estimates"),
-                                    rightcols = c("or_95", "i2"), 
-                                    rightlabs = c("OR (95% CI)", "I²"), 
-                                    pooled.totals = F,
-                                    xintercept=1,
-                                    addrow.overall = T,
-                                    test.subgroup = F,
-                                    overall.hetstat = F,
-                                    overall = F,
-                                    labeltext = TRUE,
-                                    col.subgroup = "black",
-                                    print.subgroup.name = FALSE) 
-dev.off()
 
 ### subgroup analysis
 
