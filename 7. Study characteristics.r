@@ -3,7 +3,6 @@ pacman::p_load("readxl", "writexl", "tidyverse", "metafor")
 
 # sequence study ids
 fsw_data_all <- create_study_effect_nums(fsw_data_all)
-View(fsw_data_all)
 
 # Sort, group by study, and keep the first row of each group
 all_studies <- fsw_data_all %>%
@@ -55,7 +54,7 @@ all_studies <- all_studies %>%
   # Select and reorder the columns
   select(
     study,
-    location,
+    country,
     who_region,
     design,
     pub_type,
@@ -71,7 +70,7 @@ all_studies <- all_studies %>%
   # Rename the columns
   rename(
     "study" = study,
-    "Location (city, country)" = location,
+    "Country" = country,
     "WHO region" = who_region,
     "Study design" = design,
     "Publication type" = pub_type,
@@ -84,24 +83,23 @@ all_studies <- all_studies %>%
     "ROB score" = rob_score
   )
 
-View(all_studies)
 # save the all_studies dataframe to an Excel file
 write_xlsx(all_studies, "All studies.xlsx")
 
 # characteristics of included studies
 
-# Descriptive table for "WHO region"
+# Descriptive table for WHO region
 who_region_table <- all_studies %>%
   count(`WHO region`) %>%  # Use backticks for column names with spaces
   mutate(percentage = n / sum(n) * 100)  # Calculate percentages
 
-# Descriptive table for "WHO region"
+# Descriptive table for study design
 study_design_table <- all_studies %>%
   count(`Study design`) %>%  # Use backticks for column names with spaces
   mutate(percentage = n / sum(n) * 100)  # Calculate percentages
 
 # Count the number of unique countries in all_studies
-num_unique_countries <- all_studies %>% summarise(unique_countries = n_distinct(country))
+num_unique_countries <- all_studies %>% summarise(unique_countries = n_distinct(Country))
 print(num_unique_countries)
 
 # Descriptive table for "Publication type"
@@ -111,9 +109,9 @@ pub_type_table <- all_studies %>%
 
 # Descriptive table for study quality
 study_quality_table <- all_studies %>%
-  count(`rob_score`) %>%
+  count(`ROB score`) %>%
   mutate(percentage = n / sum(n) * 100)
-  
+ 
 # Print the tables
 print(who_region_table)
 print(pub_type_table)
@@ -132,8 +130,63 @@ print(totals_table)
 
 ## total studies for violence types
 
+# Filter to relevant columns
+violence_df <- fsw_data_all %>%
+  select(study, exposure_tf_bin, outcome, exposure_type, exposed_num, exposed_perc, sample_size)
+
+# Function to get study and estimate counts
+get_counts <- function(type) {
+  df <- violence_df %>% filter(exposure_type == type)
+  n_studies <- n_distinct(df$study)
+  n_estimates <- nrow(df)
+  tibble(
+    violence_type = type,
+    n_studies = n_studies,
+    n_estimates = n_estimates
+  )
+}
+
+# Create summary table for each violence type
+violence_types <- c(
+  "Physical violence",
+  "Sexual violence",
+  "Physical and/or sexual violence",
+  "Other violence"
+)
+
+violence_counts_table <- bind_rows(lapply(violence_types, get_counts))
+
+# Studies missing exposure data (no exposed_num and no exposed_perc)
+missing_exposure <- violence_df %>%
+  mutate(
+    exposed_num = as.numeric(exposed_num),
+    exposed_perc = as.numeric(exposed_perc),
+    sample_size = as.numeric(sample_size)
+  ) %>%
+  filter(is.na(exposed_num) & is.na(exposed_perc))
+
+missing_table <- tibble(
+  violence_type = violence_types,
+  n_missing_studies = sapply(
+    violence_types,
+    function(type) n_distinct(missing_exposure$study[missing_exposure$exposure_type == type])
+  )
+)
+
+n_missing_total <- n_distinct(missing_exposure$study)
+
+# Combine all results into one list for easy export
+violence_summary_tables <- list(
+  violence_counts = violence_counts_table,
+  missing_counts = missing_table,
+  n_missing_total = tibble(n_missing_total = n_missing_total)
+)
+
+# Write to Excel (each table as a sheet)
+write_xlsx(violence_summary_tables, "Violence study and estimate counts.xlsx")
+
 # Define the types of violence and their corresponding sheet names
-violence_types <- c("Physical violence", "Sexual violence", "Physical or sexual")
+violence_types <- c("Physical violence", "Sexual violence", "Physical or sexual", "Other violence")
 
 # Initialize an empty list to store the results for each type of violence
 all_violence_studies_list <- list()
@@ -158,13 +211,10 @@ for (violence in violence_types) {
   all_violence_studies_list[[violence]] <- combined_studies
 }
 
-# Access the results for each type of violence
+# results for each type of violence
 physical_violence_studies <- all_violence_studies_list[["Physical violence"]]
 sexual_violence_studies <- all_violence_studies_list[["Sexual violence"]]
 physical_or_sexual_violence_studies <- all_violence_studies_list[["Physical or sexual"]]
-View(physical_violence_studies)
-View(sexual_violence_studies)
-View(physical_or_sexual_violence_studies)
 
 # recent and lifetime violence
 
