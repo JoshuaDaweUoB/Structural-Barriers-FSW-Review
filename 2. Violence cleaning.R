@@ -32,7 +32,7 @@ fsw_data_psv_recent <- fsw_data_all %>% filter(outcome == "HIV prevalence", expo
 # Other violence data
 fsw_data_other      <- fsw_data_all %>% filter(outcome == "HIV prevalence", exposure_type == "Other violence")
 fsw_data_other_ever <- fsw_data_all %>% filter(outcome == "HIV prevalence", exposure_type == "Other violence", exposure_tf_bin == "Ever")
-fsw_data_other_rec  <- fsw_data_all %>% filter(outcome == "HIV prevalence", exposure_type == "Other violence", exposure_tf_bin == "Recent")
+fsw_data_other_recent  <- fsw_data_all %>% filter(outcome == "HIV prevalence", exposure_type == "Other violence", exposure_tf_bin == "Recent")
 
 # ART data
 fsw_data_art <- fsw_data_all %>% filter(outcome_bin %in% c("ART use", "ART adherence"))
