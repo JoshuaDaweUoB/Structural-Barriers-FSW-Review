@@ -1,5 +1,5 @@
 # load packages
-pacman::p_load("readxl", "tidyverse")
+pacman::p_load("readxl", "tidyverse", "writexl")
 
 ## load data ##
 
@@ -14,6 +14,8 @@ fsw_data_test <- fsw_data_all %>% filter(outcome == "HIV testing")
 
 # prevalence data
 fsw_data_prev <- fsw_data_all %>% filter(outcome == "HIV prevalence")
+fsw_data_prev_ever <- fsw_data_prev %>% filter(exposure_tf_bin == "Ever")
+fsw_data_prev_recent <- fsw_data_prev %>% filter(exposure_tf_bin == "Recent")
 
 # Physical violence
 fsw_data_pv_ever   <- fsw_data_all %>% filter(outcome == "HIV prevalence", exposure_tf_bin == "Ever", exposure_type == "Physical violence")
@@ -39,7 +41,7 @@ fsw_data_art <- fsw_data_all %>% filter(outcome_bin %in% c("ART use", "ART adher
 fsw_data_vs <- fsw_data_all %>% filter(outcome == "Viral suppression")
 
 # define dataframes
-dfs <- c("fsw_data_test", "fsw_data_pv_ever", "fsw_data_pv_recent", "fsw_data_sv_ever", "fsw_data_sv_recent", "fsw_data_psv_ever", "fsw_data_psv_recent", "fsw_data_art", "fsw_data_vs", "fsw_data_other", "fsw_data_other_rec", "fsw_data_other_ever")
+dfs <- c("fsw_data_all", "fsw_data_test", "fsw_data_pv_ever", "fsw_data_pv_recent", "fsw_data_sv_ever", "fsw_data_sv_recent", "fsw_data_psv_ever", "fsw_data_psv_recent", "fsw_data_art", "fsw_data_vs", "fsw_data_other", "fsw_data_other_rec", "fsw_data_other_ever")
 
 # data cleaning
 
@@ -79,3 +81,6 @@ for (var in dfs) {
   df <- format_violence_data(df)
   assign(var, df)
 }
+
+# save cleaned data
+write_xlsx(fsw_data_all, "Final data extraction cleaned.xlsx")

@@ -1,7 +1,7 @@
 #  load packages
 pacman::p_load("tidyverse")
 
-# Cleaning functions ------------------------------------------------------
+## cleaning functions
 
 # convert to numeric
 convert_to_numeric <- function(df) {
@@ -74,10 +74,10 @@ format_violence_data <- function(df) {
 
 # create study number and effect number
 create_study_effect_nums <- function(df) {
-  # Sort the data by author and title
+  # sort author and title
   df <- df %>% arrange(author, title)
   
-  # Create study_num and effect_num columns
+  # study_num and effect_num columns
   df <- df %>%
     mutate(effect_num = row_number()) %>%
     mutate(study_num = cumsum(!duplicated(title)))
@@ -87,10 +87,10 @@ create_study_effect_nums <- function(df) {
 
 ## subgroup function
 
-# lists for loops and functions
-subgroup_columns <- c("ldc_bin", "lmic_bin", "who_region", "hiv_decrim", "sw_decrim", "gbv_law", "pre_2016", "recruitment", "perpetrator", "rob_score_3cat")
+# list for loops and functions
+subgroup_columns <- c("ldc_bin", "lmic_bin", "who_region", "pre_2016", "recruitment", "perpetrator", "rob_score_3cat")
 
-# function for processing, modeling, and plotting subgroups
+# function meta analysis
 process_and_plot <- function(data, data_name, output_plot_filename) {
   # list to store the dataframes
   all_subgroup_dataframes <- list()
@@ -128,7 +128,6 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
     
     if (!"study_num" %in% colnames(filtered_df) || !"effect_num" %in% colnames(filtered_df)) {
       filtered_df <- create_study_effect_nums(filtered_df)
-      filtered_df <- filtered_df %>% filter(use == "yes")
     }
     
     if (!"effect_best_var_ln" %in% colnames(filtered_df) || !"effect_best_ln" %in% colnames(filtered_df)) next
@@ -143,7 +142,7 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
                                           smooth_vi = TRUE)
 
        result <- rma.mv(
-  yi = filtered_df$effect_best_ln,  # Specify the column for effect sizes
+  yi = filtered_df$effect_best_ln,  
   V = V_mat, 
   random = ~ 1 | study_num / effect_num,
   data = filtered_df,
@@ -186,10 +185,10 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
     })
   }
   
-  # Drop rows with missing values
+  # drop rows with missing values
   subgroup_results <- subgroup_results %>% drop_na()
   
-  # Log-transform the results
+  # log-transform the results
   subgroup_results <- subgroup_results %>%
     mutate(
       log_model_coef = log(model_coef),
@@ -197,20 +196,13 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
       log_model_ci_upper = log(model_ci_upper)
     )
   
-  # Rename rows
+  # rename rows
   subgroup_results <- subgroup_results %>%
     mutate(subgroup_level = case_when(
     subgroup_level == "bin_no" ~ "No",
     subgroup_level == "bin_yes" ~ "Yes",
-    subgroup_level == "decrim_partial" ~ "Partial",
-    subgroup_level == "decrim_yes" ~ "Yes",
-    subgroup_level == "decrim_no" ~ "No",
-    subgroup_level == "law_yes" ~ "Yes",
-    subgroup_level == "law_no" ~ "No",
-    subgroup_level == "law_NA" ~ "NA",
     subgroup_level == "2016_FALSE" ~ "No",
     subgroup_level == "2016_TRUE" ~ "Yes",
-    subgroup_level == "decrim_NA" ~ "NA",
     subgroup_level == "region_African Region" ~ "African Region",
     subgroup_level == "region_Region of the Americas" ~ "Region of the Americas",
     subgroup_level == "region_South-East Asia Region" ~ "South-East Asia Region",
@@ -225,9 +217,6 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
     mutate(subgroup = case_when(
       subgroup == "ldc" ~ "Least developed country",
       subgroup == "lmic" ~ "Lower-middle income country",
-      subgroup == "hiv" ~ "HIV decriminalisation",
-      subgroup == "gbv" ~ "Gender-based violence laws",
-      subgroup == "sw" ~ "Decriminalised sex work",
       subgroup == "pre" ~ "Published before 2016",
       subgroup == "recruitment" ~ "Recruitment",
       subgroup == "perpetrator" ~ "Perpetrator",
@@ -236,7 +225,7 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
       TRUE ~ subgroup
     ))
   
-  # Perform meta-analysis
+  # meta-analysis
   forest_plot <- metagen(
     TE = log_model_coef,
     lower = log_model_ci_lower,
@@ -251,7 +240,7 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
     text.random = "Overall"
   )
   
-  # Save forest plot
+  # save
   png(filename = output_plot_filename, width = 30, height = 30, units = "cm", res = 600)
   forest(
     forest_plot,
@@ -271,6 +260,160 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
   )
   dev.off()
   
-  # Print summary
+  # summary
   print(summary(forest_plot))
 }
+
+# function to analyse violence overall with rho = 0.4
+perform_all_violence_analysis_rho1 <- function(df, analysis, exposure) {
+  
+  # filter to infection
+  filtered_df <- df %>%
+    filter(exposure_tf_bin == exposure) %>%
+    filter(!is.na(.data[[var_names[[analysis]]$est]]))
+   
+  # study_num and effect_num columns
+  filtered_df <- filtered_df %>%
+    arrange(exposure_type, study) %>%
+    mutate(effect_num = row_number()) %>%
+    mutate(study_num = cumsum(!duplicated(study))) 
+
+  # covariance matrix assuming constant sampling correlation
+  V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
+                                    cluster = filtered_df$study_num,
+                                    r = 0.4,
+                                    smooth_vi = TRUE)
+  
+  # multilevel random effects model using `rma.mv` from metafor
+  result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
+                   V = V_mat, 
+                   random = ~ 1 | study_num / effect_num,
+                   data = filtered_df,   
+                   sparse = TRUE)       
+  
+  print(result)
+  print(exp(coef(result)))
+  
+  result2 <- metagen(
+    TE = filtered_df[[var_names[[analysis]]$est]],
+    lower = filtered_df[[var_names[[analysis]]$lower]],
+    upper = filtered_df[[var_names[[analysis]]$upper]],
+    studlab = filtered_df$study,
+    data = filtered_df,
+    sm = "OR",
+    method.tau = "REML",
+    common = FALSE,
+    random = TRUE, 
+    backtransf = TRUE,
+    subgroup = filtered_df$exposure_type,  # subgroup by exposure_type
+    text.random = "Overall"
+  )
+  
+  print(summary(result2))
+  
+  result2$TE.random <- result$b
+  result2$lower.random <- result$ci.lb
+  result2$upper.random <- result$ci.ub
+  
+  # create folder 
+  dir.create("Plots/sensitivity/", recursive = TRUE, showWarnings = FALSE)
+  df_name <- deparse(substitute(df))
+  filename <- paste0("Plots/sensitivity/rho1_", df_name, "_", tolower(exposure), "_", analysis, ".png")    
+  png(filename = filename, width = 60, height = 55, units = "cm", res = 600)
+  
+  forest(
+    result2,
+    sortvar = filtered_df$study,
+    xlim = c(0.2, 4),             
+    leftcols = leftcols[[tolower(exposure)]], 
+    leftlabs = leftlabs[[tolower(exposure)]],
+    rightcols = rightcols,
+    rightlabs = rightlabs,
+    pooled.totals = TRUE,
+    xintercept = 1,
+    addrow.overall = TRUE,
+    overall.hetstat = TRUE,
+    overall = TRUE,
+    labeltext = TRUE,
+    col.subgroup = "black",
+    print.subgroup.name = TRUE # show subgroup names
+  )
+  
+  dev.off()}
+
+# function to analyse violence overall with rho = 0.8
+perform_all_violence_analysis_rho2 <- function(df, analysis, exposure) {
+  
+  # filter to infection
+  filtered_df <- df %>%
+    filter(exposure_tf_bin == exposure) %>%
+    filter(!is.na(.data[[var_names[[analysis]]$est]]))
+   
+  # study_num and effect_num columns
+  filtered_df <- filtered_df %>%
+    arrange(exposure_type, study) %>%
+    mutate(effect_num = row_number()) %>%
+    mutate(study_num = cumsum(!duplicated(study))) 
+
+  # covariance matrix assuming constant sampling correlation
+  V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
+                                    cluster = filtered_df$study_num,
+                                    r = 0.8,
+                                    smooth_vi = TRUE)
+  
+  # multilevel random effects model using `rma.mv` from metafor
+  result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
+                   V = V_mat, 
+                   random = ~ 1 | study_num / effect_num,
+                   data = filtered_df,   
+                   sparse = TRUE)       
+  
+  print(result)
+  print(exp(coef(result)))
+  
+  result2 <- metagen(
+    TE = filtered_df[[var_names[[analysis]]$est]],
+    lower = filtered_df[[var_names[[analysis]]$lower]],
+    upper = filtered_df[[var_names[[analysis]]$upper]],
+    studlab = filtered_df$study,
+    data = filtered_df,
+    sm = "OR",
+    method.tau = "REML",
+    common = FALSE,
+    random = TRUE, 
+    backtransf = TRUE,
+    subgroup = filtered_df$exposure_type,  # subgroup by exposure_type
+    text.random = "Overall"
+  )
+  
+  print(summary(result2))
+  
+  result2$TE.random <- result$b
+  result2$lower.random <- result$ci.lb
+  result2$upper.random <- result$ci.ub
+  
+  # create folder 
+  dir.create("Plots/sensitivity/", recursive = TRUE, showWarnings = FALSE)
+  df_name <- deparse(substitute(df))
+  filename <- paste0("Plots/sensitivity/rho2_", df_name, "_", tolower(exposure), "_", analysis, ".png")
+  png(filename = filename, width = 60, height = 55, units = "cm", res = 600)
+  
+  forest(
+    result2,
+    sortvar = filtered_df$study,
+    xlim = c(0.2, 4),             
+    leftcols = leftcols[[tolower(exposure)]], 
+    leftlabs = leftlabs[[tolower(exposure)]],
+    rightcols = rightcols,
+    rightlabs = rightlabs,
+    pooled.totals = TRUE,
+    xintercept = 1,
+    addrow.overall = TRUE,
+    overall.hetstat = TRUE,
+    overall = TRUE,
+    labeltext = TRUE,
+    col.subgroup = "black",
+    print.subgroup.name = TRUE # show subgroup names
+  )
+  
+  dev.off()}

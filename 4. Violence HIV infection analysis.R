@@ -34,6 +34,17 @@ var_names <- list(
   best = list(est = "effect_best_ln", var = "effect_best_var_ln", lower = "effect_best_lower_ln", upper = "effect_best_upper_ln")
 )
 
+# labels for plots
+analysis_labels <- c(
+  best = "Combined",
+  unadj = "Unadjusted",
+  adj = "Adjusted"
+)
+exposure_labels <- c(
+  recent = "Recent",
+  ever = "Ever"
+)
+
 # dataframes for each exposure and type of violence
 dataframes <- list(
   physical = list(recent = "fsw_data_pv_recent", ever = "fsw_data_pv_ever"),
@@ -79,13 +90,16 @@ perform_all_violence_analysis <- function(df, analysis, exposure) {
   filtered_df <- df %>%
     filter(outcome == "HIV prevalence", exposure_tf_bin == exposure) %>%
     filter(!is.na(.data[[var_names[[analysis]]$est]]))
-   
+
   # study_num and effect_num columns
   filtered_df <- filtered_df %>%
-    arrange(exposure_type, study) %>%
-    mutate(effect_num = row_number()) %>%
-    mutate(study_num = cumsum(!duplicated(study))) 
-
+    arrange(study) %>%
+    mutate(
+      study_num = cumsum(!duplicated(title)),
+      effect_num = row_number()
+    ) %>%
+    ungroup()
+    
   # covariance matrix assuming constant sampling correlation
   V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
                                     cluster = filtered_df$study_num,
@@ -113,7 +127,6 @@ perform_all_violence_analysis <- function(df, analysis, exposure) {
     common = FALSE,
     random = TRUE, 
     backtransf = TRUE,
-    subgroup = filtered_df$exposure_type,  # subgroup by exposure_type
     text.random = "Overall"
   )
   
@@ -124,10 +137,9 @@ perform_all_violence_analysis <- function(df, analysis, exposure) {
   result2$upper.random <- result$ci.ub
   
   # create folder 
-  dir.create("Plots/prevalence/all violence", recursive = TRUE, showWarnings = FALSE)
   filename <- paste0("Plots/prevalence/all violence/all_violence_", tolower(exposure), "_", analysis, ".png")
   
-  png(filename = filename, width = 60, height = 55, units = "cm", res = 600)
+  png(filename = filename, width = 60, height = 55, units = "cm", res = 300)
   
   forest(
     result2,
@@ -144,10 +156,8 @@ perform_all_violence_analysis <- function(df, analysis, exposure) {
     overall = TRUE,
     labeltext = TRUE,
     col.subgroup = "black",
-    print.subgroup.name = TRUE # show subgroup names
   )
-  
-  dev.off()}
+}
 
 # run for recent and ever
 for (exposure in c("Recent", "Ever")) {
@@ -156,6 +166,17 @@ for (exposure in c("Recent", "Ever")) {
   }
 }
 
+
+  # eggers test
+  eggers <- metabias(result2, method.bias = "linreg")
+  eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
+  eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
+
+  # funnel plot
+  funnel_filename <- paste0("Plots/prevalence/all violence/funnel plots/all_violence_", tolower(exposure), "_", analysis, "_funnel.png")
+  png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
+  funnel(result2, main = paste(analysis, "-", exposure, "\nEgger's test", eggers_p_str))
+  dev.off()
 ## violence by type
 
 # function to analyse by violent type and create forest plots
@@ -163,9 +184,15 @@ perform_analysis <- function(df, analysis, exposure, violence_type) {
   # filter the dataframe
   filtered_df <- df %>% filter(outcome == "HIV prevalence")
   filtered_df <- filtered_df %>% filter(!is.na(filtered_df[[var_names[[analysis]]$est]]))
-  
+
   # study_num and effect_num columns
-  filtered_df <- create_study_effect_nums(filtered_df)
+  filtered_df <- filtered_df %>%
+    arrange(study) %>%
+    mutate(
+      study_num = cumsum(!duplicated(title)),
+      effect_num = row_number()
+    ) %>%
+    ungroup()
   
   # covariance matrix assuming constant sampling correlation
   V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
@@ -309,8 +336,8 @@ create_other_violence_plots <- function(data, outcome_filter = "HIV prevalence")
         result2,
         sortvar = filtered_df$study,
         xlim = c(0.2, 4),             
-        leftcols = c("studlab", "exposure_definition_short", "exposure_time_frame", "perpetrator", "country"), 
-        leftlabs = c("Study", "Exposure definition", "Exposure time frame", "Perpetrator", "Country"),
+        leftcols = c("study", "study_num", "effect_num", "exposure_definition_short", "exposure_time_frame", "perpetrator", "country"),
+        leftlabs = c("Study", "Study number", "Effect number", "Exposure definition", "Exposure time frame", "Perpetrator", "Country"),
         rightcols = rightcols,
         rightlabs = rightlabs,
         pooled.totals = TRUE,
@@ -333,206 +360,32 @@ create_other_violence_plots(fsw_data_other)
 
 ## subgroup analysis 
 
-# Call the function for "recently exposed to physical violence"
+# function for "recently exposed to any violence"
 process_and_plot(
-  data = fsw_data_pv_recent,
-  data_name = "fsw_data_pv_recent",
-  output_plot_filename = "Plots/subgroups/recent_pv_subgroup.png"
+  data = fsw_data_prev_recent,
+  data_name = "fsw_data_prev_recent",
+  output_plot_filename = "Plots/subgroups/recent_any_violence_subgroup.png"
 )
 
-# Call the function for "ever exposed to physical violence"
+# function for "ever exposed to any violence"
 process_and_plot(
-  data = fsw_data_pv_ever,
-  data_name = "fsw_data_pv_ever",
-  output_plot_filename = "Plots/subgroups/ever_pv_subgroup.png"
-)
-
-# Call the function for "recently exposed to sexual violence"
-process_and_plot(
-  data = fsw_data_sv_recent,
-  data_name = "fsw_data_sv_recent",
-  output_plot_filename = "Plots/subgroups/recent_sv_subgroup.png"
-)
-
-# Call the function for "ever exposed to sexual violence"
-process_and_plot(
-  data = fsw_data_sv_ever,
-  data_name = "fsw_data_sv_ever",
-  output_plot_filename = "Plots/subgroups/ever_sv_subgroup.png"
-)
-
-# Call the function for "recently exposed to physical and/or sexual violence"
-process_and_plot(
-  data = fsw_data_psv_recent,
-  data_name = "fsw_data_psv_recent",
-  output_plot_filename = "Plots/subgroups/recent_psv_subgroup.png"
-)
-
-# Call the function for "ever exposed to physical and/or sexual violence"
-process_and_plot(
-  data = fsw_data_psv_ever,
-  data_name = "fsw_data_psv_ever",
-  output_plot_filename = "Plots/subgroups/ever_psv_subgroup.png"
+  data = fsw_data_prev_ever,
+  data_name = "fsw_data_prev_ever",
+  output_plot_filename = "Plots/subgroups/ever_any_violence_subgroup.png"
 )
 
 ## sensitivity analysis
 
-# constant sampling correlation alternatives
-rho_1 <- 0.4
-rho_2 <- 0.8
-
-perform_analysis_rho1 <- function(df, analysis, exposure, violence_type) {
-  # Filter the dataframe
-  filtered_df <- df %>% filter(outcome == "HIV prevalence")
-  filtered_df <- filtered_df %>% filter(!is.na(filtered_df[[var_names[[analysis]]$est]]))
-  
-  # Create study_num and effect_num columns
-  filtered_df <- create_study_effect_nums(filtered_df)
-  
-  # Create a covariance matrix assuming constant sampling correlation
-  V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
-                                    cluster = filtered_df$study_num,
-                                    r = rho_1,
-                                    smooth_vi = TRUE)
-  
-  # Fit a multilevel random effects model using `rma.mv` from metafor
-  result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
-                   V = V_mat, 
-                   random = ~ 1 | study_num / effect_num,
-                   data = filtered_df,   
-                   sparse = TRUE)       
-  
-  print(result)
-  print(exp(coef(result)))
-  
-  result2 <- metagen(TE = filtered_df[[var_names[[analysis]]$est]],
-                     lower = filtered_df[[var_names[[analysis]]$lower]],
-                     upper = filtered_df[[var_names[[analysis]]$upper]],
-                     studlab = study,
-                     data = filtered_df,
-                     sm = "OR",
-                     method.tau = "REML",
-                     common = FALSE,
-                     random = TRUE, 
-                     backtransf = TRUE,
-                     text.random = "Overall")
-  
-  print(summary(result2))
-  
-  result2$TE.random <- result$b
-  result2$lower.random <- result$ci.lb
-  result2$upper.random <- result$ci.ub
-  
-  # Ensure the folder exists
-  dir.create("Plots/sensitivity_analysis", recursive = TRUE, showWarnings = FALSE)
-  
-  # Append the suffix to the filename
-  filename <- paste0("Plots/sensitivity_analysis/", basename(plot_filenames[[violence_type]][[analysis]][[exposure]]), "_rho1.png")
-  
-  png(filename = filename, width = 45, height = 22, units = "cm", res = 600)
-  
-  forest(result2,
-         sortvar = study,
-         xlim = c(0.2, 4),             
-         leftcols = leftcols[[exposure]], 
-         leftlabs = leftlabs[[exposure]],
-         rightcols = rightcols,
-         rightlabs = rightlabs,
-         pooled.totals = TRUE,
-         xintercept = 1,
-         addrow.overall = TRUE,
-         overall.hetstat = TRUE,
-         overall = TRUE,
-         labeltext = TRUE,
-         col.subgroup = "black")
-  
-  dev.off()
-}
-
-# Loop over each type of violence, analysis, and exposure to perform the analysis and create forest plots
-for (violence_type in names(dataframes)) {
+# run for recent and ever violence and rho = 0.4
+for (exposure in c("Recent", "Ever")) {
   for (analysis in analyses) {
-    for (exposure in exposures) {
-      df <- get(dataframes[[violence_type]][[exposure]])
-      perform_analysis_rho1(df, analysis, exposure, violence_type)
-    }
+    perform_all_violence_analysis_rho1(fsw_data_prev, analysis, exposure)
   }
 }
 
-perform_analysis_rho2 <- function(df, analysis, exposure, violence_type) {
-  # Filter the dataframe
-  filtered_df <- df %>% filter(outcome == "HIV prevalence")
-  filtered_df <- filtered_df %>% filter(!is.na(filtered_df[[var_names[[analysis]]$est]]))
-  
-  # Create study_num and effect_num columns
-  filtered_df <- create_study_effect_nums(filtered_df)
-  
-  # Create a covariance matrix assuming constant sampling correlation
-  V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
-                                    cluster = filtered_df$study_num,
-                                    r = rho_2,
-                                    smooth_vi = TRUE)
-  
-  # Fit a multilevel random effects model using `rma.mv` from metafor
-  result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
-                   V = V_mat, 
-                   random = ~ 1 | study_num / effect_num,
-                   data = filtered_df,   
-                   sparse = TRUE)       
-  
-  print(result)
-  print(exp(coef(result)))
-  
-  result2 <- metagen(TE = filtered_df[[var_names[[analysis]]$est]],
-                     lower = filtered_df[[var_names[[analysis]]$lower]],
-                     upper = filtered_df[[var_names[[analysis]]$upper]],
-                     studlab = study,
-                     data = filtered_df,
-                     sm = "OR",
-                     method.tau = "REML",
-                     common = FALSE,
-                     random = TRUE, 
-                     backtransf = TRUE,
-                     text.random = "Overall")
-  
-  print(summary(result2))
-  
-  result2$TE.random <- result$b
-  result2$lower.random <- result$ci.lb
-  result2$upper.random <- result$ci.ub
-  
-  # Ensure the folder exists
-  dir.create("Plots/sensitivity_analysis", recursive = TRUE, showWarnings = FALSE)
-  
-  # Append the suffix to the filename
-  filename <- paste0("Plots/sensitivity_analysis/", basename(plot_filenames[[violence_type]][[analysis]][[exposure]]), "_rho2.png")
-  
-  png(filename = filename, width = 45, height = 22, units = "cm", res = 600)
-  
-  forest(result2,
-         sortvar = study,
-         xlim = c(0.2, 4),             
-         leftcols = leftcols[[exposure]], 
-         leftlabs = leftlabs[[exposure]],
-         rightcols = rightcols,
-         rightlabs = rightlabs,
-         pooled.totals = TRUE,
-         xintercept = 1,
-         addrow.overall = TRUE,
-         overall.hetstat = TRUE,
-         overall = TRUE,
-         labeltext = TRUE,
-         col.subgroup = "black")
-  
-  dev.off()
-}
-
-# Loop over each type of violence, analysis, and exposure to perform the analysis and create forest plots
-for (violence_type in names(dataframes)) {
+# run for recent and ever violence and rho = 0.8
+for (exposure in c("Recent", "Ever")) {
   for (analysis in analyses) {
-    for (exposure in exposures) {
-      df <- get(dataframes[[violence_type]][[exposure]])
-      perform_analysis_rho2(df, analysis, exposure, violence_type)
-    }
+    perform_all_violence_analysis_rho2(fsw_data_prev, analysis, exposure)
   }
 }

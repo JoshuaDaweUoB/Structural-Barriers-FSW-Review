@@ -16,8 +16,8 @@ settings.meta(CIseparator = "-")
 fsw_data_overall$i2 <- round(fsw_data_overall$i2 * 100, 0)  # Convert i2 to percentage and round to no decimals
 fsw_data_overall$i2 <- paste0(fsw_data_overall$i2, "%")  # Add percentage sign to i2 values
 
-# Perform meta-analysis
-  summary_hiv_violence <- metagen(TE = effect_ln,
+# meta-analysis
+summary_hiv_violence <- metagen(TE = effect_ln,
                                   lower = lower_ln,
                                   upper = upper_ln,
                                   data = fsw_data_overall,
@@ -29,10 +29,10 @@ fsw_data_overall$i2 <- paste0(fsw_data_overall$i2, "%")  # Add percentage sign t
                                   byvar = outcome,
                                   text.random = "Overall")
   
-  # Print summary
+  # summary
   print(summary(summary_hiv_violence))
   
-  # Save forest plot
+  # save forest plot
   png(filename = "Plots/overall plots/violence_all_analyses.png", width = 30, height = 28, units = "cm", res = 600)
   forest(summary_hiv_violence, 
          sortvar = outcome,
@@ -59,7 +59,7 @@ fsw_data_overall_ever <- fsw_data_overall_ever %>% filter(name == "Lifetime")
 fsw_data_overall_ever$i2 <- round(fsw_data_overall_ever$i2 * 100, 0)  # Convert i2 to percentage and round to no decimals
 fsw_data_overall_ever$i2 <- paste0(fsw_data_overall_ever$i2, "%")  # Add percentage sign to i2 values
 
-# Perform meta-analysis
+# meta-analysis
   summary_hiv_violence_ever <- metagen(TE = effect_ln,
                                   lower = lower_ln,
                                   upper = upper_ln,
@@ -72,10 +72,10 @@ fsw_data_overall_ever$i2 <- paste0(fsw_data_overall_ever$i2, "%")  # Add percent
                                   byvar = outcome,
                                   text.random = "Overall")
   
-  # Print summary
+  # summary
   print(summary(summary_hiv_violence_ever))
   
-  # Save forest plot
+  # save forest plot
   png(filename = "Plots/overall plots/violence_all_analyses_ever.png", width = 30, height = 28, units = "cm", res = 600)
   forest(summary_hiv_violence_ever, 
          sortvar = outcome,
@@ -102,7 +102,7 @@ fsw_data_overall_recent <- fsw_data_overall_recent %>% filter(name == "Recent")
 fsw_data_overall_recent$i2 <- round(fsw_data_overall_recent$i2 * 100, 0)  # Convert i2 to percentage and round to no decimals
 fsw_data_overall_recent$i2 <- paste0(fsw_data_overall_recent$i2, "%")  # Add percentage sign to i2 values
 
-# Perform meta-analysis
+# meta-analysis
   summary_hiv_violence_rec <- metagen(TE = effect_ln,
                                   lower = lower_ln,
                                   upper = upper_ln,
@@ -115,10 +115,10 @@ fsw_data_overall_recent$i2 <- paste0(fsw_data_overall_recent$i2, "%")  # Add per
                                   byvar = outcome,
                                   text.random = "Overall")
   
-  # Print summary
+  # summary
   print(summary(summary_hiv_violence_rec))
   
-  # Save forest plot
+  # save forest plot
   png(filename = "Plots/overall plots/violence_all_analyses_recent.png", width = 30, height = 28, units = "cm", res = 600)
   forest(summary_hiv_violence_rec, 
          sortvar = outcome,

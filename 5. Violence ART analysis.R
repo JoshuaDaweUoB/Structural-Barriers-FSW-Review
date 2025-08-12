@@ -20,8 +20,6 @@ rightlabs = c("Estimate", "95% CI")
 fsw_data_art_uptake <- fsw_data_art %>% filter(outcome_bin == "ART use")
 fsw_data_art_adherence <- fsw_data_art %>% filter(outcome_bin == "ART adherence")
 
-#### Multilevel random effects model with constant sampling correlation ####
-
 # constant sampling correlation
 rho <- 0.6
 
@@ -251,32 +249,76 @@ for (analysis in analyses) {
 
 ## subgroup analyses
 
+# recent violence and art adherence
 filtered_df <- fsw_data_art_adherence %>%
-  filter(exposure_tf_bin == "Recent", use == "yes")
+  filter(exposure_tf_bin == "Recent")
 
-# Call the function for "recent expoure to violence for ART adherence"
+# function for "recent expoure to violence for ART adherence"
 process_and_plot(
   data = filtered_df,
   data_name = "filtered_df",
   output_plot_filename = "Plots/subgroups/recent_art_adherence_subgroup.png"
 )
 
+# recent violence and art use
 filtered_df <- fsw_data_art_uptake %>%
-  filter(exposure_tf_bin == "Recent", use == "yes")
+  filter(exposure_tf_bin == "Recent")
 
-# Call the function for "recent expoure to violence for ART use"
+# function for "recent expoure to violence for ART use"
 process_and_plot(
   data = filtered_df,
   data_name = "filtered_df",
   output_plot_filename = "Plots/subgroups/recent_art_use_subgroup.png"
 )
 
-filtered_df <- fsw_data_art_uptake %>%
-  filter(exposure_tf_bin == "Ever", use == "yes")
+# lifetime violence and art adherence
+filtered_df <- fsw_data_art_adherence %>%
+  filter(exposure_tf_bin == "Ever")
 
-# Call the function for "recent expoure to violence for ART use"
+# function for "ever expoure to violence for ART use"
+process_and_plot(
+  data = filtered_df,
+  data_name = "filtered_df",
+  output_plot_filename = "Plots/subgroups/ever_art_adherence_subgroup.png"
+)
+
+# recent violence and art use
+filtered_df <- fsw_data_art_uptake %>%
+  filter(exposure_tf_bin == "Ever")
+
+# function for "ever expoure to violence for ART use"
 process_and_plot(
   data = filtered_df,
   data_name = "filtered_df",
   output_plot_filename = "Plots/subgroups/ever_art_use_subgroup.png"
 )
+
+## sensitivity analysis
+
+# run for recent and ever violence, art adherence and rho = 0.4
+for (exposure in c("Recent", "Ever")) {
+  for (analysis in analyses) {
+    perform_all_violence_analysis_rho1(fsw_data_art_adherence, analysis, exposure)
+  }
+}
+
+# run for recent and ever violence, art adherence and rho = 0.8
+for (exposure in c("Recent", "Ever")) {
+  for (analysis in analyses) {
+    perform_all_violence_analysis_rho2(fsw_data_art_adherence, analysis, exposure)
+  }
+}
+
+# run for recent and ever violence, art use and rho = 0.4
+for (exposure in c("Recent", "Ever")) {
+  for (analysis in analyses) {
+    perform_all_violence_analysis_rho1(fsw_data_art_uptake, analysis, exposure)
+  }
+}
+
+# run for recent and ever violence, art use and rho = 0.8
+for (exposure in c("Recent", "Ever")) {
+  for (analysis in analyses) {
+    perform_all_violence_analysis_rho2(fsw_data_art_uptake, analysis, exposure)
+  }
+}

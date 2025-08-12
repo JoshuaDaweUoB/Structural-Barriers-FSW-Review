@@ -174,138 +174,12 @@ for (analysis in analyses) {
   perform_analysis_ever(fsw_data_test, analysis)
 }
 
-### subgroup analysis
-
-## WHO region
-
-# africa 
-
-filtered_df <- fsw_data_test %>% filter(exposure_tf_bin == "Ever")
-filtered_df <- filtered_df %>% filter(effect_best != "NA")
-filtered_df <- filtered_df %>% filter(who_region == "African Region")
-
-# create a covariance matrix assuming constant sampling correlation
-V_mat <- impute_covariance_matrix(filtered_df$effect_best_var_ln,
-                                  cluster = filtered_df$study_num,
-                                  r = rho,
-                                  smooth_vi = TRUE)
-
-# fit a multilevel random effects model using `rma.mv` from metafor
-result <- rma.mv(effect_best_ln, 
-                 V = V_mat, 
-                 random = ~ 1 | study_num / effect_num,
-                 data = filtered_df,   
-                 sparse = TRUE)       
-
-result 
-exp(coef(result))
-
-
-result2 <- metagen(TE = effect_best_ln,
-                   lower = effect_best_lower_ln,
-                   upper = effect_best_upper_ln,
-                   studlab = study,
-                   data = filtered_df,
-                   sm = "OR",
-                   method.tau = "REML",
-                   common = FALSE,
-                   random = TRUE, 
-                   backtransf = TRUE,
-                   text.random = "Overall")
-
-print(summary(result2))
-
-result2$TE.random <- result$b
-result2$lower.random <- result$ci.lb
-result2$upper.random <- result$ci.ub
-
-filename <- paste0("Plots/subgroups/ever_best_test_africa.png")
-png(filename = filename, width = 38, height = 14, units = "cm", res = 600)
-
-forest(result2,
-       sortvar = study,
-       xlim = c(0.2, 4),             
-       leftcols = leftcols_recent, 
-       leftlabs = leftlabs_recent,
-       rightcols = rightcols,
-       rightlabs = rightlabs,
-       pooled.totals = TRUE,
-       xintercept = 1,
-       addrow.overall = TRUE,
-       overall.hetstat = TRUE,
-       overall = TRUE,
-       labeltext = TRUE,
-       col.subgroup = "black")
-
-dev.off()  
-
-# asia
-
-filtered_df <- fsw_data_test %>% filter(exposure_tf_bin == "Ever")
-filtered_df <- filtered_df %>% filter(effect_best != "NA")
-filtered_df <- filtered_df %>% filter(who_region == "South-East Asian Region")
-
-# create a covariance matrix assuming constant sampling correlation
-V_mat <- impute_covariance_matrix(filtered_df$effect_best_var_ln,
-                                  cluster = filtered_df$study_num,
-                                  r = rho,
-                                  smooth_vi = TRUE)
-
-# fit a multilevel random effects model using `rma.mv` from metafor
-result <- rma.mv(effect_best_ln, 
-                 V = V_mat, 
-                 random = ~ 1 | study_num / effect_num,
-                 data = filtered_df,   
-                 sparse = TRUE)       
-
-result 
-exp(coef(result))
-
-
-result2 <- metagen(TE = effect_best_ln,
-                   lower = effect_best_lower_ln,
-                   upper = effect_best_upper_ln,
-                   studlab = study,
-                   data = filtered_df,
-                   sm = "OR",
-                   method.tau = "REML",
-                   common = FALSE,
-                   random = TRUE, 
-                   backtransf = TRUE,
-                   text.random = "Overall")
-
-print(summary(result2))
-
-result2$TE.random <- result$b
-result2$lower.random <- result$ci.lb
-result2$upper.random <- result$ci.ub
-
-filename <- paste0("Plots/subgroups/ever_best_test_asia.png")
-png(filename = filename, width = 38, height = 14, units = "cm", res = 600)
-
-forest(result2,
-       sortvar = study,
-       xlim = c(0.2, 4),             
-       leftcols = leftcols_recent, 
-       leftlabs = leftlabs_recent,
-       rightcols = rightcols,
-       rightlabs = rightlabs,
-       pooled.totals = TRUE,
-       xintercept = 1,
-       addrow.overall = TRUE,
-       overall.hetstat = TRUE,
-       overall = TRUE,
-       labeltext = TRUE,
-       col.subgroup = "black")
-
-dev.off()  
-
 ## subgroup analysis
 
 filtered_df <- fsw_data_test %>%
-  filter(exposure_tf_bin == "Recent", use == "yes")
+  filter(exposure_tf_bin == "Recent")
 
-# Call the function for "recent violence"
+# function for "recent violence"
 process_and_plot(
   data = filtered_df,
   data_name = "filtered_df",
@@ -313,13 +187,27 @@ process_and_plot(
 )
 
 filtered_df <- fsw_data_test %>%
-  filter(exposure_tf_bin == "Ever", use == "yes")
+  filter(exposure_tf_bin == "Ever")
 
-# Call the function for "ever violence"
+# function for "ever violence"
 process_and_plot(
   data = filtered_df,
   data_name = "filtered_df",
   output_plot_filename = "Plots/subgroups/ever_test_subgroup.png"
 )
 
+## sensitivity analysis
 
+# run for recent and ever violence and rho = 0.4
+for (exposure in c("Recent", "Ever")) {
+  for (analysis in analyses) {
+    perform_all_violence_analysis_rho1(fsw_data_test, analysis, exposure)
+  }
+}
+
+# run for recent and ever violence and rho = 0.8
+for (exposure in c("Recent", "Ever")) {
+  for (analysis in analyses) {
+    perform_all_violence_analysis_rho2(fsw_data_test, analysis, exposure)
+  }
+}

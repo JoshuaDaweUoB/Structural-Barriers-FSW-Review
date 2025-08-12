@@ -9,10 +9,10 @@ settings.meta(CIbracket = "(")
 settings.meta(CIseparator = "-") 
 
 # columns
-leftcols_recent <- c("study", "study_num", "effect_num", "exposure_definition_short", "exposure_time_frame", "perpetrator", "country", "outcome_definition")
-leftlabs_recent <- c("Study", "Study number", "Effect number", "Exposure definition", "Exposure time frame", "Perpetrator", "Country", "VS cutoff")
-leftcols_lifetime <- c("study", "study_num", "effect_num", "exposure_definition_short", "perpetrator", "country", "outcome_definition")
-leftlabs_lifetime <- c("Study", "Study number", "Effect number", "Exposure definition", "Perpetrator", "Country", "VS cutoff")
+leftcols_recent <- c("study", "study_num", "effect_num", "exposure_definition_short", "exposure_time_frame", "perpetrator", "country", "outcome_definition", "outcome_denominator")
+leftlabs_recent <- c("Study", "Study number", "Effect number", "Exposure definition", "Exposure time frame", "Perpetrator", "Country", "VS cutoff", "VS denominator")
+leftcols_lifetime <- c("study", "study_num", "effect_num", "exposure_definition_short", "perpetrator", "country", "outcome_definition", "outcome_denominator")
+leftlabs_lifetime <- c("Study", "Study number", "Effect number", "Exposure definition", "Perpetrator", "Country", "VS cutoff", "VS denominator")
 rightcols <- c("effect", "ci")
 rightlabs = c("Estimate", "95% CI")
 
@@ -20,7 +20,7 @@ rightlabs = c("Estimate", "95% CI")
 rho <- 0.6
 
 # define models
-analyses <- c("unadj", "adj", "best")
+analyses <- c("best", "unadj", "adj")
 
 # variable names for each analysis
 var_names <- list(
@@ -74,8 +74,9 @@ perform_analysis <- function(df, analysis) {
   result2$lower.random <- result$ci.lb
   result2$upper.random <- result$ci.ub
   
-  filename <- paste0("Plots/viral suppression/", analysis, "_recent_viral_suppression.png")
-  png(filename = filename, width = 45, height = 14, units = "cm", res = 600)
+  df_name <- deparse(substitute(df))
+  filename <- paste0("Plots/viral suppression/", analysis, "_recent_", df_name, ".png")
+  png(filename = filename, width = 55, height = 14, units = "cm", res = 600)
   
   forest(result2,
          sortvar = filtered_df$study,
@@ -98,6 +99,14 @@ perform_analysis <- function(df, analysis) {
 # loop to perform the analysis and create forest plots
 for (analysis in analyses) {
   perform_analysis(fsw_data_vs, analysis)
+}
+
+# analysis without wilson
+fsw_data_vs_nowilson <- fsw_data_vs %>%
+  filter(study != "Wilson (2016a)")
+
+for (analysis in analyses) {
+  perform_analysis(fsw_data_vs_nowilson, analysis)
 }
 
 ## lifetime violence data
@@ -145,8 +154,9 @@ perform_analysis <- function(df, analysis) {
   result2$lower.random <- result$ci.lb
   result2$upper.random <- result$ci.ub
   
-  filename <- paste0("Plots/viral suppression/", analysis, "_ever_viral_suppression.png")
-  png(filename = filename, width = 45, height = 14, units = "cm", res = 600)
+    df_name <- deparse(substitute(df))
+    filename <- paste0("Plots/viral suppression/", analysis, "_ever_", df_name, ".png")
+    png(filename = filename, width = 55, height = 14, units = "cm", res = 600)
   
   forest(result2,
          sortvar = filtered_df$study,
@@ -173,22 +183,40 @@ for (analysis in analyses) {
 
 ## subgroup analysis
 
+# ever violence and vs
 filtered_df <- fsw_data_vs %>%
-  filter(exposure_tf_bin == "Ever", use == "yes")
+  filter(exposure_tf_bin == "Ever")
 
-# Call the function for "recent expoure to violence for VS"
+# function for "recent expoure to violence for VS"
 process_and_plot(
   data = filtered_df,
   data_name = "filtered_df",
   output_plot_filename = "Plots/subgroups/ever_vs_subgroup.png"
 )
 
+# recent violence and vs
 filtered_df <- fsw_data_vs %>%
-  filter(exposure_tf_bin == "Recent", use == "yes")
+  filter(exposure_tf_bin == "Recent")
 
-# Call the function for "recent expoure to violence for VS"
+# function for "recent expoure to violence for VS"
 process_and_plot(
   data = filtered_df,
   data_name = "filtered_df",
   output_plot_filename = "Plots/subgroups/recent_vs_subgroup.png"
 )
+
+## sensitivity analysis
+
+# run for recent and ever violence, art use and rho = 0.4
+for (exposure in c("Recent", "Ever")) {
+  for (analysis in analyses) {
+    perform_all_violence_analysis_rho1(fsw_data_vs, analysis, exposure)
+  }
+}
+
+# run for recent and ever violence, art use and rho = 0.8
+for (exposure in c("Recent", "Ever")) {
+  for (analysis in analyses) {
+    perform_all_violence_analysis_rho2(fsw_data_vs, analysis, exposure)
+  }
+}
