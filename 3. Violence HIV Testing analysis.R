@@ -96,6 +96,21 @@ perform_analysis_recent <- function(df, analysis) {
          col.subgroup = "black")
   
   dev.off()
+
+  eggers <- metabias(result2, method.bias = "linreg")
+eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
+eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
+
+# Labels for funnel plot
+violence_type_label <- violence_type_labels[[violence_type]]
+analysis_label <- analysis_labels[[analysis]]
+exposure_label <- exposure_labels[[tolower(exposure)]]
+funnel_label <- paste0(violence_type_label, " - ", analysis_label, " - ", exposure_label)
+funnel_filename <- paste0("Plots/prevalence/violence by type/funnel plots/", funnel_label, ".png")
+
+png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
+funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
+dev.off()
 }
 
 # loop over each analysis

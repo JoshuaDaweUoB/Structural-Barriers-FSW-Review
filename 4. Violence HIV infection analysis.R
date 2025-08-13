@@ -194,6 +194,40 @@ for (exposure in c("Recent", "Ever")) {
   }
 }
   
+get_all_violence_funnel_path <- function(analysis, exposure) {
+  paste0(
+    "Plots/prevalence/all violence/funnel plots/",
+    analysis_labels[[analysis]], " - ", exposure_labels[[exposure]], ".png"
+  )
+}
+
+# Collect all funnel plots in a list for the combined grid
+all_funnel_imgs <- vector("list", length = length(exposures) * length(analyses))
+idx <- 1
+for (i in seq_along(exposures)) {      # rows: recent, ever
+  for (j in seq_along(analyses)) {     # columns: unadj, adj, best
+    file <- get_all_violence_funnel_path(analyses[j], exposures[i])
+    if (file.exists(file)) {
+      all_funnel_imgs[[idx]] <- rasterGrob(readPNG(file), interpolate = TRUE)
+    } else {
+      all_funnel_imgs[[idx]] <- nullGrob()
+    }
+    idx <- idx + 1
+  }
+}
+
+# Create combined figure: 2 rows (Recent, Ever), 3 columns (Unadj, Adj, Combined)
+combined_filename <- "Plots/prevalence/all violence/funnel plots/all_violence_funnel_grid.png"
+png(combined_filename, width = 1800, height = 1200, res = 150)
+grid.arrange(
+  grobs = all_funnel_imgs,
+  nrow = length(exposures),
+  ncol = length(analyses),
+  top = "All violence: Funnel plots"
+)
+dev.off()
+
+
 ## violence by type
 
 # function to analyse by violent type and create forest plots
