@@ -21,7 +21,7 @@ dataframes <- list(fsw_data_pv_recent, fsw_data_sv_recent, fsw_data_psv_recent, 
 dataframe_names <- c("fsw_data_pv_recent", "fsw_data_sv_recent", "fsw_data_psv_recent", "fsw_data_pv_ever", "fsw_data_sv_ever", "fsw_data_psv_ever")
 analyses <- c("unadj", "adj", "best")
 exposures <- c("recent", "ever")
-violence_types <- c("Physical", "Sexual", "Physical or sexual")
+violence_types <- c("Physical", "Sexual", "Physical or sexual", "Other violence")
 
 ## modelling
 

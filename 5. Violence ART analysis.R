@@ -23,14 +23,34 @@ fsw_data_art_adherence <- fsw_data_art %>% filter(outcome_bin == "ART adherence"
 # constant sampling correlation
 rho <- 0.6
 
-# models
-analyses <- c("best", "unadj", "adj")
+# lists for loops and functions
+analyses <- c("unadj", "adj", "best")
+exposures <- c("recent", "ever")
+violence_types <- c("Physical", "Sexual", "Physical or sexual")
 
 # variable names for each analysis
 var_names <- list(
   unadj = list(est = "unadj_est_ln", var = "unadj_var_ln", lower = "un_lower_ln", upper = "un_upper_ln"),
   adj = list(est = "adj_est_ln", var = "adj_var_ln", lower = "adj_lower_ln", upper = "adj_upper_ln"),
   best = list(est = "effect_best_ln", var = "effect_best_var_ln", lower = "effect_best_lower_ln", upper = "effect_best_upper_ln")
+)
+
+# labels for plots
+analysis_labels <- c(
+  best = "Combined",
+  unadj = "Unadjusted",
+  adj = "Adjusted"
+)
+exposure_labels <- c(
+  recent = "Recent",
+  ever = "Ever"
+)
+
+violence_type_labels <- c(
+  physical = "Physical",
+  sexual = "Sexual",
+  physical_sexual = "Physical or sexual",
+  other = "Other violence"
 )
 
 # function for recent violence and art use
@@ -97,6 +117,20 @@ perform_analysis_recent_uptake <- function(df, analysis) {
          col.subgroup = "black")
   
   dev.off()
+
+# eggers test
+eggers <- metabias(result2, method.bias = "linreg")
+eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
+eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
+
+# funnel plot
+funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[["recent"]])
+sanitized_label <- gsub("[/\\?<>\\:*|\"]", "-", funnel_label)
+funnel_filename <- paste0("Plots/art use/art uptake/funnel plots/", sanitized_label, ".png")
+
+png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
+funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
+dev.off()
 }
 
 # loop to perform the analysis
@@ -110,6 +144,13 @@ perform_analysis_ever_uptake <- function(df, analysis) {
   # filter 
   filtered_df <- df %>% filter(exposure_tf_bin == "Ever", !is.na(.[[var_names[[analysis]]$est]]))
   
+  # skip if k <= 1
+  k <- nrow(filtered_df)
+  if (k <= 1) {
+    message(paste("Skipping", analysis, "Ever ART uptake: k <=", k))
+    return(NULL)
+  }
+
   # study_num and effect_num columns
   filtered_df <- create_study_effect_nums(filtered_df)
 
@@ -167,12 +208,60 @@ perform_analysis_ever_uptake <- function(df, analysis) {
          col.subgroup = "black")
   
   dev.off()
+
+# eggers test
+eggers <- metabias(result2, method.bias = "linreg")
+eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
+eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
+
+# funnel plot
+funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[["ever"]])
+sanitized_label <- gsub("[/\\?<>\\:*|\"]", "-", funnel_label)
+funnel_filename <- paste0("Plots/art use/art uptake/funnel plots/", sanitized_label, ".png")
+
+png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
+funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
+dev.off()
 }
 
 # loop to perform the analysis
 for (analysis in analyses) {
-  perform_analysis(fsw_data_art_uptake, analysis)
+  perform_analysis_ever_uptake(fsw_data_art_uptake, analysis)
 }
+
+# function for combining funnel plots
+get_art_uptake_funnel_path <- function(analysis, exposure) {
+  paste0(
+    "Plots/art use/art uptake/funnel plots/",
+    analysis_labels[[analysis]], " - ", exposure_labels[[exposure]], ".png"
+  )
+}
+
+# funnel plots list
+all_funnel_imgs <- vector("list", length = length(exposures) * length(analyses))
+idx <- 1
+for (i in seq_along(exposures)) {
+  for (j in seq_along(analyses)) {
+    file <- get_art_uptake_funnel_path(analyses[j], exposures[i])
+    if (file.exists(file)) {
+      all_funnel_imgs[[idx]] <- rasterGrob(readPNG(file), interpolate = TRUE)
+    } else {
+      all_funnel_imgs[[idx]] <- nullGrob()
+    }
+    idx <- idx + 1
+  }
+}
+
+# combine figures 
+combined_filename <- "Plots/art use/art uptake/funnel plots/art_use_funnel_grid.png"
+png(combined_filename, width = 1800, height = 1200, res = 150)
+grid.arrange(
+  grobs = all_funnel_imgs,
+  nrow = length(exposures),
+  ncol = length(analyses),
+  top = "Art use: Funnel plots"
+)
+dev.off()
 
 ## recent violence and art adherence
 
@@ -240,12 +329,60 @@ perform_analysis_recent_adherence <- function(df, analysis) {
          col.subgroup = "black")
   
   dev.off()
+
+# eggers test
+eggers <- metabias(result2, method.bias = "linreg")
+eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
+eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
+
+# funnel plot
+funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[["recent"]])
+sanitized_label <- gsub("[/\\?<>\\:*|\"]", "-", funnel_label)
+funnel_filename <- paste0("Plots/art use/art adherence/funnel plots/", sanitized_label, ".png")
+
+png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
+funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
+dev.off()
 }
 
 # loop to perform the analysis
 for (analysis in analyses) {
   perform_analysis_recent_adherence(fsw_data_art_adherence, analysis)
 }
+
+# function for combining funnel plots
+get_testing_art_adherence_path <- function(analysis, exposure) {
+  paste0(
+    "Plots/art use/art adherence/funnel plots/",
+    analysis_labels[[analysis]], " - ", exposure_labels[[exposure]], ".png"
+  )
+}
+
+# funnel plots list
+all_funnel_imgs <- vector("list", length = length(exposures) * length(analyses))
+idx <- 1
+for (i in seq_along(exposures)) {
+  for (j in seq_along(analyses)) {
+    file <- get_testing_art_adherence_path(analyses[j], exposures[i])
+    if (file.exists(file)) {
+      all_funnel_imgs[[idx]] <- rasterGrob(readPNG(file), interpolate = TRUE)
+    } else {
+      all_funnel_imgs[[idx]] <- nullGrob()
+    }
+    idx <- idx + 1
+  }
+}
+
+# combine figures 
+combined_filename <- "Plots/art use/art adherence/funnel plots/art_adherence_funnel_grid.png"
+png(combined_filename, width = 1800, height = 1200, res = 150)
+grid.arrange(
+  grobs = all_funnel_imgs,
+  nrow = length(exposures),
+  ncol = length(analyses),
+  top = "Art adherence: Funnel plots"
+)
+dev.off()
 
 ## subgroup analyses
 
