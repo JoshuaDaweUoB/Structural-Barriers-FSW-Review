@@ -21,6 +21,7 @@ dataframes <- list(fsw_data_pv_recent, fsw_data_sv_recent, fsw_data_psv_recent, 
 dataframe_names <- c("fsw_data_pv_recent", "fsw_data_sv_recent", "fsw_data_psv_recent", "fsw_data_pv_ever", "fsw_data_sv_ever", "fsw_data_psv_ever")
 analyses <- c("unadj", "adj", "best")
 exposures <- c("recent", "ever")
+violence_types <- c("Physical", "Sexual", "Physical or sexual")
 
 ## modelling
 
@@ -193,7 +194,8 @@ for (exposure in c("Recent", "Ever")) {
     perform_all_violence_analysis(fsw_data_prev, analysis, exposure)
   }
 }
-  
+
+# function for combining funnel plots
 get_all_violence_funnel_path <- function(analysis, exposure) {
   paste0(
     "Plots/prevalence/all violence/funnel plots/",
@@ -201,11 +203,11 @@ get_all_violence_funnel_path <- function(analysis, exposure) {
   )
 }
 
-# Collect all funnel plots in a list for the combined grid
+# funnel plots list
 all_funnel_imgs <- vector("list", length = length(exposures) * length(analyses))
 idx <- 1
-for (i in seq_along(exposures)) {      # rows: recent, ever
-  for (j in seq_along(analyses)) {     # columns: unadj, adj, best
+for (i in seq_along(exposures)) {
+  for (j in seq_along(analyses)) {
     file <- get_all_violence_funnel_path(analyses[j], exposures[i])
     if (file.exists(file)) {
       all_funnel_imgs[[idx]] <- rasterGrob(readPNG(file), interpolate = TRUE)
@@ -216,7 +218,7 @@ for (i in seq_along(exposures)) {      # rows: recent, ever
   }
 }
 
-# Create combined figure: 2 rows (Recent, Ever), 3 columns (Unadj, Adj, Combined)
+# combine figures 
 combined_filename <- "Plots/prevalence/all violence/funnel plots/all_violence_funnel_grid.png"
 png(combined_filename, width = 1800, height = 1200, res = 150)
 grid.arrange(
@@ -226,7 +228,6 @@ grid.arrange(
   top = "All violence: Funnel plots"
 )
 dev.off()
-
 
 ## violence by type
 
@@ -318,7 +319,7 @@ eggers <- metabias(result2, method.bias = "linreg")
 eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
 eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
 
-# Labels for funnel plot
+# labels for funnel plot
 violence_type_label <- violence_type_labels[[violence_type]]
 analysis_label <- analysis_labels[[analysis]]
 exposure_label <- exposure_labels[[tolower(exposure)]]
@@ -330,7 +331,7 @@ funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
 dev.off()
 }
 
-# loop over each type of violence and create forest plots
+# loop to create forest plots
 for (violence_type in names(dataframes)) {
   for (analysis in analyses) {
     for (exposure in exposures) {
@@ -341,11 +342,6 @@ for (violence_type in names(dataframes)) {
 }
 
 ## combining plots
-
-violence_types <- c("Physical", "Sexual", "Physical or sexual")
-exposures <- c("recent", "ever") # Top row: recent, bottom row: ever
-analyses <- c("unadj", "adj", "best") # Columns: unadj, adj, best
-
 get_funnel_path <- function(violence, analysis, exposure) {
   paste0(
     "Plots/prevalence/violence by type/funnel plots/",
@@ -354,11 +350,10 @@ get_funnel_path <- function(violence, analysis, exposure) {
 }
 
 for (violence in violence_types) {
-  # Fill the grid row-wise: for each exposure (row), for each analysis (column)
   funnel_imgs <- vector("list", length = length(exposures) * length(analyses))
   idx <- 1
-  for (i in seq_along(exposures)) {      # rows: recent, ever
-    for (j in seq_along(analyses)) {     # columns: unadj, adj, best
+  for (i in seq_along(exposures)) { 
+    for (j in seq_along(analyses)) { 
       file <- get_funnel_path(violence, analyses[j], exposures[i])
       if (file.exists(file)) {
         funnel_imgs[[idx]] <- rasterGrob(readPNG(file), interpolate = TRUE)
