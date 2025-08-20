@@ -309,7 +309,7 @@ for (df_name in dfs_studies) {
     pred <- predict(rma_res, transf=transf.ilogit)
     pooled_prev <- pred$pred
     pooled_prev_ci <- c(pred$ci.lb, pred$ci.ub)
-    # Manual I2 calculation for between-study variance
+    # I2 calculation
     var_comp <- as.numeric(rma_res$sigma2)
     total_var <- sum(var_comp) + mean(rma_res$vi)
     I2 <- 100 * var_comp[1] / total_var
