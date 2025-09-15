@@ -82,17 +82,22 @@ perform_analysis_recent <- function(df, analysis) {
   print(result)
   print(exp(coef(result)))
   
-  result2 <- metagen(TE = filtered_df[[var_names[[analysis]]$est]],
-                     lower = filtered_df[[var_names[[analysis]]$lower]],
-                     upper = filtered_df[[var_names[[analysis]]$upper]],
-                     studlab = filtered_df$study,
-                     data = filtered_df,
-                     sm = "OR",
-                     method.tau = "REML",
-                     common = FALSE,
-                     random = TRUE, 
-                     backtransf = TRUE,
-                     text.random = "Overall")
+  # analysis
+  result2 <- metagen(
+    TE = filtered_df[[var_names[[analysis]]$est]],
+    lower = filtered_df[[var_names[[analysis]]$lower]],
+    upper = filtered_df[[var_names[[analysis]]$upper]],
+    studlab = filtered_df$study,
+    data = filtered_df,
+    sm = "OR",
+    method.tau = "REML",
+    common = FALSE,
+    random = TRUE, 
+    backtransf = TRUE,
+    byvar = filtered_df$outcome_tf_bin,
+    text.random = "Overall",
+    print.byvar = FALSE
+  )
   
   print(summary(result2))
   
@@ -101,7 +106,7 @@ perform_analysis_recent <- function(df, analysis) {
   result2$upper.random <- result$ci.ub
   
   filename <- paste0("Plots/testing/", analysis, "_recent_testing.png")
-  png(filename = filename, width = 45, height = 14, units = "cm", res = 600)
+  png(filename = filename, width = 55, height = 14, units = "cm", res = 600)
   
   forest(result2,
          sortvar = filtered_df$study,
@@ -116,23 +121,25 @@ perform_analysis_recent <- function(df, analysis) {
          overall.hetstat = TRUE,
          overall = TRUE,
          labeltext = TRUE,
-         col.subgroup = "black")
+         col.subgroup = "black",
+         byvar = filtered_df$outcome_tf_bin
+  )
   
   dev.off()
 
-# eggers test
-eggers <- metabias(result2, method.bias = "linreg")
-eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
-eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
+  # eggers test
+  eggers <- metabias(result2, method.bias = "linreg")
+  eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
+  eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
 
-# funnel plot
-funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[["recent"]])
-sanitized_label <- gsub("[/\\?<>\\:*|\"]", "-", funnel_label)
-funnel_filename <- paste0("Plots/testing/funnel plots/", sanitized_label, ".png")
+  # funnel plot
+  funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[["recent"]])
+  sanitized_label <- gsub("[/\\?<>\\:*|\"]", "-", funnel_label)
+  funnel_filename <- paste0("Plots/testing/funnel plots/", sanitized_label, ".png")
 
-png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
-funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
-dev.off()
+  png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
+  funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
+  dev.off()
 }
 
 # loop over each analysis
@@ -167,17 +174,21 @@ perform_analysis_ever <- function(df, analysis) {
   print(result)
   print(exp(coef(result)))
   
-  result2 <- metagen(TE = filtered_df[[var_names[[analysis]]$est]],
-                     lower = filtered_df[[var_names[[analysis]]$lower]],
-                     upper = filtered_df[[var_names[[analysis]]$upper]],
-                     studlab = filtered_df$study,
-                     data = filtered_df,
-                     sm = "OR",
-                     method.tau = "REML",
-                     common = FALSE,
-                     random = TRUE, 
-                     backtransf = TRUE,
-                     text.random = "Overall")
+  result2 <- metagen(
+    TE = filtered_df[[var_names[[analysis]]$est]],
+    lower = filtered_df[[var_names[[analysis]]$lower]],
+    upper = filtered_df[[var_names[[analysis]]$upper]],
+    studlab = filtered_df$study,
+    data = filtered_df,
+    sm = "OR",
+    method.tau = "REML",
+    common = FALSE,
+    random = TRUE, 
+    backtransf = TRUE,
+    byvar = filtered_df$outcome_tf_bin, 
+    text.random = "Overall",
+    print.byvar = FALSE    
+  )
   
   print(summary(result2))
   
@@ -186,7 +197,7 @@ perform_analysis_ever <- function(df, analysis) {
   result2$upper.random <- result$ci.ub
   
   filename <- paste0("Plots/testing/", analysis, "_ever_testing.png")
-  png(filename = filename, width = 45, height = 14, units = "cm", res = 600)
+  png(filename = filename, width = 45, height = 18, units = "cm", res = 600)
   
   forest(result2,
          sortvar = filtered_df$study,
@@ -201,23 +212,26 @@ perform_analysis_ever <- function(df, analysis) {
          overall.hetstat = TRUE,
          overall = TRUE,
          labeltext = TRUE,
-         col.subgroup = "black")
+         col.subgroup = "black",
+         byvar = filtered_df$outcome_tf_bin, # <-- add subgroup here
+         print.byvar = FALSE                 # <-- hide variable name in subgroup header
+  )
   
   dev.off()
 
-# eggers test
-eggers <- metabias(result2, method.bias = "linreg")
-eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
-eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
+  # eggers test
+  eggers <- metabias(result2, method.bias = "linreg")
+  eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
+  eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
 
-# funnel plot
-funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[["ever"]])
-sanitized_label <- gsub("[/\\?<>\\:*|\"]", "-", funnel_label)
-funnel_filename <- paste0("Plots/testing/funnel plots/", sanitized_label, ".png")
+  # funnel plot
+  funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[["ever"]])
+  sanitized_label <- gsub("[/\\?<>\\:*|\"]", "-", funnel_label)
+  funnel_filename <- paste0("Plots/testing/funnel plots/", sanitized_label, ".png")
 
-png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
-funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
-dev.off()
+  png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
+  funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
+  dev.off()
 }
 
 # loop over each analysis

@@ -4,13 +4,16 @@ pacman::p_load("readxl", "writexl", "tidyverse", "metafor")
 # sequence study ids
 fsw_data_all <- create_study_effect_nums(fsw_data_all)
 
-# Sort, group by study, and keep the first row of each group
+# one row per study
 all_studies <- fsw_data_all %>%
   arrange(study) %>%
   group_by(study) %>%
   mutate(sequence = row_number()) %>%
   ungroup() %>%
   filter(sequence == 1)
+
+n_unique_studies <- n_distinct(all_studies$study)
+print(n_unique_studies)
 
 # study characteristics
 all_studies <- all_studies %>%
@@ -130,13 +133,9 @@ print(totals_table)
 
 ## total studies for violence types
 
-# Filter to relevant columns
-violence_df <- fsw_data_all %>%
-  select(study, exposure_tf_bin, outcome, exposure_type, exposed_num, exposed_perc, sample_size)
-
 # Function to get study and estimate counts
 get_counts <- function(type) {
-  df <- violence_df %>% filter(exposure_type == type)
+  df <- fsw_data_all %>% filter(exposure_type == type)
   n_studies <- n_distinct(df$study)
   n_estimates <- nrow(df)
   tibble(
@@ -185,6 +184,11 @@ violence_summary_tables <- list(
 # Write to Excel (each table as a sheet)
 write_xlsx(violence_summary_tables, "Violence study and estimate counts.xlsx")
 
+# Filter to relevant columns
+violence_df <- fsw_data_all %>%
+  filter(use_exposed == "yes") %>%
+  select(study, exposure_tf_bin, outcome, exposure_type, exposure_definition_short, perpetrator, exposed_num, exposed_perc, sample_size, hiv_num)
+
 # Define the types of violence and their corresponding sheet names
 violence_types <- c("Physical violence", "Sexual violence", "Physical or sexual", "Other violence")
 
@@ -193,21 +197,20 @@ all_violence_studies_list <- list()
 
 # Loop over each type of violence
 for (violence in violence_types) {
-  # Read the "Ever" and "Recent" sheets for the current type of violence
-  ever_stud <- read_excel("All violence studies.xlsx", paste0(violence, " - Ever")) %>%
+  # Filter for "Ever" and "Recent" exposures for the current type of violence
+  ever_stud <- violence_df %>%
+    filter(exposure_type == violence, exposure_tf_bin == "Ever") %>%
     select(study)
-  recent_stud <- read_excel("All violence studies.xlsx", paste0(violence, " - Recent")) %>%
+  recent_stud <- violence_df %>%
+    filter(exposure_type == violence, exposure_tf_bin == "Recent") %>%
     select(study)
   
-  # Combine the "Ever" and "Recent" data
+  # Combine and deduplicate studies
   combined_studies <- bind_rows(ever_stud, recent_stud) %>%
-    arrange(study) %>% # Sort by the column 'study'
-    group_by(study) %>% # Group by 'study'
-    mutate(sequence = row_number()) %>% # Create a sequence within each group
-    ungroup() %>%
-    filter(sequence == 1) # Keep only rows where sequence equals 1
+    arrange(study) %>%
+    distinct(study, .keep_all = TRUE)
   
-  # Store the result in the list with the type of violence as the key
+  # Store the result in the list
   all_violence_studies_list[[violence]] <- combined_studies
 }
 
@@ -219,20 +222,20 @@ physical_or_sexual_violence_studies <- all_violence_studies_list[["Physical or s
 # recent and lifetime violence
 
 # Physical violence studies
-fsw_data_pv_ever_studies   <- fsw_data_all %>% filter(exposure_tf_bin == "Ever", exposure_type == "Physical violence")
-fsw_data_pv_recent_studies <- fsw_data_all %>% filter(exposure_tf_bin == "Recent", exposure_type == "Physical violence")
+fsw_data_pv_ever_studies   <- violence_df %>% filter(exposure_tf_bin == "Ever", exposure_type == "Physical violence")
+fsw_data_pv_recent_studies <- violence_df %>% filter(exposure_tf_bin == "Recent", exposure_type == "Physical violence")
 
 # Sexual violence studies
-fsw_data_sv_ever_studies   <- fsw_data_all %>% filter(exposure_tf_bin == "Ever", exposure_type == "Sexual violence")
-fsw_data_sv_recent_studies <- fsw_data_all %>% filter(exposure_tf_bin == "Recent", exposure_type == "Sexual violence")
+fsw_data_sv_ever_studies   <- violence_df %>% filter(exposure_tf_bin == "Ever", exposure_type == "Sexual violence")
+fsw_data_sv_recent_studies <- violence_df %>% filter(exposure_tf_bin == "Recent", exposure_type == "Sexual violence")
 
 # Physical and/or sexual violence studies
-fsw_data_psv_ever_studies   <- fsw_data_all %>% filter(exposure_tf_bin == "Ever", exposure_type == "Physical and/or sexual violence")
-fsw_data_psv_recent_studies <- fsw_data_all %>% filter(exposure_tf_bin == "Recent", exposure_type == "Physical and/or sexual violence")
+fsw_data_psv_ever_studies   <- violence_df %>% filter(exposure_tf_bin == "Ever", exposure_type == "Physical and/or sexual violence")
+fsw_data_psv_recent_studies <- violence_df %>% filter(exposure_tf_bin == "Recent", exposure_type == "Physical and/or sexual violence")
 
 # Other violence studies
-fsw_data_other_ever_studies   <- fsw_data_all %>% filter(exposure_tf_bin == "Ever", exposure_type == "Other violence")
-fsw_data_other_recent_studies <- fsw_data_all %>% filter(exposure_tf_bin == "Recent", exposure_type == "Other violence")
+fsw_data_other_ever_studies   <- violence_df %>% filter(exposure_tf_bin == "Ever", exposure_type == "Other violence")
+fsw_data_other_recent_studies <- violence_df %>% filter(exposure_tf_bin == "Recent", exposure_type == "Other violence")
 
 # create list of dataframes
 dfs_studies <- c(
