@@ -53,7 +53,7 @@ violence_type_labels <- c(
   other = "Other violence"
 )
 
-# function for recent violence and art use
+# function for recent violence and art use with subgroups for violence type
 perform_analysis_recent_uptake <- function(df, analysis) {
  
   # filter
@@ -78,17 +78,21 @@ perform_analysis_recent_uptake <- function(df, analysis) {
   print(result)
   print(exp(coef(result)))
   
-  result2 <- metagen(TE = filtered_df[[var_names[[analysis]]$est]],
-                     lower = filtered_df[[var_names[[analysis]]$lower]],
-                     upper = filtered_df[[var_names[[analysis]]$upper]],
-                     studlab = filtered_df$study,
-                     data = filtered_df,
-                     sm = "OR",
-                     method.tau = "REML",
-                     common = FALSE,
-                     random = TRUE, 
-                     backtransf = TRUE,
-                     text.random = "Overall")
+  result2 <- metagen(
+    TE = filtered_df[[var_names[[analysis]]$est]],
+    lower = filtered_df[[var_names[[analysis]]$lower]],
+    upper = filtered_df[[var_names[[analysis]]$upper]],
+    studlab = filtered_df$study,
+    data = filtered_df,
+    sm = "OR",
+    method.tau = "REML",
+    common = FALSE,
+    random = TRUE, 
+    backtransf = TRUE,
+    byvar = filtered_df$exposure_type,   # subgroup by violence type
+    text.random = "Overall",
+    print.byvar = FALSE
+  )
   
   print(summary(result2))
   
@@ -97,9 +101,8 @@ perform_analysis_recent_uptake <- function(df, analysis) {
   result2$upper.random <- result$ci.ub
     
   # filename
-  filename <- paste0("Plots/art use/art uptake/recent_", analysis, "_art_uptake.png")
-  png(filename = filename, width = 45, height = 14, units = "cm", res = 600)
-  
+  filename <- paste0("Plots/art use/art uptake/recent_", analysis, "_art_uptake_violence_type.png")
+  png(filename = filename, width = 45, height = 22, units = "cm", res = 600)
   
   forest(result2,
          sortvar = filtered_df$study,
@@ -114,31 +117,15 @@ perform_analysis_recent_uptake <- function(df, analysis) {
          overall.hetstat = TRUE,
          overall = TRUE,
          labeltext = TRUE,
-         col.subgroup = "black")
+         col.subgroup = "black",
+         byvar = filtered_df$exposure_type, 
+         print.byvar = FALSE
+  )
   
   dev.off()
-
-# eggers test
-eggers <- metabias(result2, method.bias = "linreg")
-eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
-eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
-
-# funnel plot
-funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[["recent"]])
-sanitized_label <- gsub("[/\\?<>\\:*|\"]", "-", funnel_label)
-funnel_filename <- paste0("Plots/art use/art uptake/funnel plots/", sanitized_label, ".png")
-
-png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
-funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
-dev.off()
 }
 
-# loop to perform the analysis
-for (analysis in analyses) {
-  perform_analysis_recent_uptake(fsw_data_art_uptake, analysis)
-}
-
-# function for lifetime violence and art uptake
+# function for lifetime violence and art uptake 
 perform_analysis_ever_uptake <- function(df, analysis) {
  
   # filter 
@@ -170,17 +157,21 @@ perform_analysis_ever_uptake <- function(df, analysis) {
   print(result)
   print(exp(coef(result)))
   
-  result2 <- metagen(TE = filtered_df[[var_names[[analysis]]$est]],
-                     lower = filtered_df[[var_names[[analysis]]$lower]],
-                     upper = filtered_df[[var_names[[analysis]]$upper]],
-                     studlab = filtered_df$study,
-                     data = filtered_df,
-                     sm = "OR",
-                     method.tau = "REML",
-                     common = FALSE,
-                     random = TRUE, 
-                     backtransf = TRUE,
-                     text.random = "Overall")
+  result2 <- metagen(
+    TE = filtered_df[[var_names[[analysis]]$est]],
+    lower = filtered_df[[var_names[[analysis]]$lower]],
+    upper = filtered_df[[var_names[[analysis]]$upper]],
+    studlab = filtered_df$study,
+    data = filtered_df,
+    sm = "OR",
+    method.tau = "REML",
+    common = FALSE,
+    random = TRUE, 
+    backtransf = TRUE,
+    byvar = filtered_df$exposure_type,
+    text.random = "Overall",
+    print.byvar = FALSE
+  )
   
   print(summary(result2))
   
@@ -189,7 +180,7 @@ perform_analysis_ever_uptake <- function(df, analysis) {
   result2$upper.random <- result$ci.ub
   
   # filename
-  filename <- paste0("Plots/art use/art uptake/ever_", analysis, "_art_uptake.png")
+  filename <- paste0("Plots/art use/art uptake/ever_", analysis, "_art_uptake_violence_type.png")
   png(filename = filename, width = 45, height = 14, units = "cm", res = 600)
   
   forest(result2,
@@ -205,27 +196,17 @@ perform_analysis_ever_uptake <- function(df, analysis) {
          overall.hetstat = TRUE,
          overall = TRUE,
          labeltext = TRUE,
-         col.subgroup = "black")
+         col.subgroup = "black",
+         byvar = filtered_df$exposure_type,
+         print.byvar = FALSE
+  )
   
   dev.off()
-
-# eggers test
-eggers <- metabias(result2, method.bias = "linreg")
-eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
-eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
-
-# funnel plot
-funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[["ever"]])
-sanitized_label <- gsub("[/\\?<>\\:*|\"]", "-", funnel_label)
-funnel_filename <- paste0("Plots/art use/art uptake/funnel plots/", sanitized_label, ".png")
-
-png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
-funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
-dev.off()
 }
 
 # loop to perform the analysis
 for (analysis in analyses) {
+  perform_analysis_recent_uptake(fsw_data_art_uptake, analysis)
   perform_analysis_ever_uptake(fsw_data_art_uptake, analysis)
 }
 
@@ -265,7 +246,7 @@ dev.off()
 
 ## recent violence and art adherence
 
-# function for recent violence and art adherence
+# function for recent violence and art adherence 
 perform_analysis_recent_adherence <- function(df, analysis) {
  
   # filter
@@ -290,17 +271,21 @@ perform_analysis_recent_adherence <- function(df, analysis) {
   print(result)
   print(exp(coef(result)))
   
-  result2 <- metagen(TE = filtered_df[[var_names[[analysis]]$est]],
-                     lower = filtered_df[[var_names[[analysis]]$lower]],
-                     upper = filtered_df[[var_names[[analysis]]$upper]],
-                     studlab = filtered_df$study,
-                     data = filtered_df,
-                     sm = "OR",
-                     method.tau = "REML",
-                     common = FALSE,
-                     random = TRUE, 
-                     backtransf = TRUE,
-                     text.random = "Overall")
+  result2 <- metagen(
+    TE = filtered_df[[var_names[[analysis]]$est]],
+    lower = filtered_df[[var_names[[analysis]]$lower]],
+    upper = filtered_df[[var_names[[analysis]]$upper]],
+    studlab = filtered_df$study,
+    data = filtered_df,
+    sm = "OR",
+    method.tau = "REML",
+    common = FALSE,
+    random = TRUE, 
+    backtransf = TRUE,
+    byvar = filtered_df$exposure_type,   
+    text.random = "Overall",
+    print.byvar = FALSE       
+  )
   
   print(summary(result2))
   
@@ -309,9 +294,8 @@ perform_analysis_recent_adherence <- function(df, analysis) {
   result2$upper.random <- result$ci.ub
     
   # filename
-  filename <- paste0("Plots/art use/art adherence/recent_", analysis, "_art_adherence.png")
+  filename <- paste0("Plots/art use/art adherence/recent_", analysis, "_art_adherence_violence_type.png")
   png(filename = filename, width = 45, height = 14, units = "cm", res = 600)
-  
   
   forest(result2,
          sortvar = filtered_df$study,
@@ -326,23 +310,12 @@ perform_analysis_recent_adherence <- function(df, analysis) {
          overall.hetstat = TRUE,
          overall = TRUE,
          labeltext = TRUE,
-         col.subgroup = "black")
+         col.subgroup = "black",
+         byvar = filtered_df$exposure_type,      
+         print.byvar = FALSE                    
+  )
   
   dev.off()
-
-# eggers test
-eggers <- metabias(result2, method.bias = "linreg")
-eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
-eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
-
-# funnel plot
-funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[["recent"]])
-sanitized_label <- gsub("[/\\?<>\\:*|\"]", "-", funnel_label)
-funnel_filename <- paste0("Plots/art use/art adherence/funnel plots/", sanitized_label, ".png")
-
-png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
-funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
-dev.off()
 }
 
 # loop to perform the analysis

@@ -83,17 +83,21 @@ perform_analysis <- function(df, analysis) {
   print(result)
   print(exp(coef(result)))
   
-  result2 <- metagen(TE = filtered_df[[var_names[[analysis]]$est]],
-                     lower = filtered_df[[var_names[[analysis]]$lower]],
-                     upper = filtered_df[[var_names[[analysis]]$upper]],
-                     studlab = filtered_df$study,
-                     data = filtered_df,
-                     sm = "OR",
-                     method.tau = "REML",
-                     common = FALSE,
-                     random = TRUE, 
-                     backtransf = TRUE,
-                     text.random = "Overall")
+  result2 <- metagen(
+    TE = filtered_df[[var_names[[analysis]]$est]],
+    lower = filtered_df[[var_names[[analysis]]$lower]],
+    upper = filtered_df[[var_names[[analysis]]$upper]],
+    studlab = filtered_df$study,
+    data = filtered_df,
+    sm = "OR",
+    method.tau = "REML",
+    common = FALSE,
+    random = TRUE, 
+    backtransf = TRUE,
+    byvar = filtered_df$exposure_type,   # violence type subgroup
+    text.random = "Overall",
+    print.byvar = FALSE                  # hide variable name in subgroup header
+  )
   
   print(summary(result2))
   
@@ -102,7 +106,7 @@ perform_analysis <- function(df, analysis) {
   result2$upper.random <- result$ci.ub
   
   df_name <- deparse(substitute(df))
-  filename <- paste0("Plots/viral suppression/", analysis, "_recent_", df_name, ".png")
+  filename <- paste0("Plots/viral suppression/", analysis, "_recent_", df_name, "_violence_type.png")
   png(filename = filename, width = 55, height = 14, units = "cm", res = 600)
   
   forest(result2,
@@ -118,23 +122,12 @@ perform_analysis <- function(df, analysis) {
          overall.hetstat = TRUE,
          overall = TRUE,
          labeltext = TRUE,
-         col.subgroup = "black")
+         col.subgroup = "black",
+         byvar = filtered_df$exposure_type,         # violence type subgroup
+         print.byvar = FALSE                       # hide variable name in subgroup header
+  )
   
   dev.off()
-
-# eggers test
-eggers <- metabias(result2, method.bias = "linreg")
-eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
-eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
-
-# funnel plot
-funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[["recent"]])
-sanitized_label <- gsub("[/\\?<>\\:*|\"]", "-", funnel_label)
-funnel_filename <- paste0("Plots/viral suppression/funnel plots/", sanitized_label, ".png")
-
-png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
-funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
-dev.off()
 }
 
 # loop to perform the analysis and create forest plots
@@ -152,7 +145,7 @@ for (analysis in analyses) {
 
 ## lifetime violence data
 
-# function for lifetime violence and vs
+# function for lifetime violence and vs with subgroups for violence type
 perform_analysis <- function(df, analysis) {
   # filter
   filtered_df <- df %>% filter(exposure_tf_bin == "Ever", !is.na(.[[var_names[[analysis]]$est]]))
@@ -177,17 +170,21 @@ perform_analysis <- function(df, analysis) {
   print(result)
   print(exp(coef(result)))
   
-  result2 <- metagen(TE = filtered_df[[var_names[[analysis]]$est]],
-                     lower = filtered_df[[var_names[[analysis]]$lower]],
-                     upper = filtered_df[[var_names[[analysis]]$upper]],
-                     studlab = filtered_df$study,
-                     data = filtered_df,
-                     sm = "OR",
-                     method.tau = "REML",
-                     common = FALSE,
-                     random = TRUE, 
-                     backtransf = TRUE,
-                     text.random = "Overall")
+  result2 <- metagen(
+    TE = filtered_df[[var_names[[analysis]]$est]],
+    lower = filtered_df[[var_names[[analysis]]$lower]],
+    upper = filtered_df[[var_names[[analysis]]$upper]],
+    studlab = filtered_df$study,
+    data = filtered_df,
+    sm = "OR",
+    method.tau = "REML",
+    common = FALSE,
+    random = TRUE, 
+    backtransf = TRUE,
+    byvar = filtered_df$exposure_type,   
+    text.random = "Overall",
+    print.byvar = FALSE                  
+  )
   
   print(summary(result2))
   
@@ -195,9 +192,9 @@ perform_analysis <- function(df, analysis) {
   result2$lower.random <- result$ci.lb
   result2$upper.random <- result$ci.ub
   
-    df_name <- deparse(substitute(df))
-    filename <- paste0("Plots/viral suppression/", analysis, "_ever_", df_name, ".png")
-    png(filename = filename, width = 55, height = 14, units = "cm", res = 600)
+  df_name <- deparse(substitute(df))
+  filename <- paste0("Plots/viral suppression/", analysis, "_ever_", df_name, "_violence_type.png")
+  png(filename = filename, width = 55, height = 14, units = "cm", res = 600)
   
   forest(result2,
          sortvar = filtered_df$study,
@@ -212,23 +209,12 @@ perform_analysis <- function(df, analysis) {
          overall.hetstat = TRUE,
          overall = TRUE,
          labeltext = TRUE,
-         col.subgroup = "black")
+         col.subgroup = "black",
+         byvar = filtered_df$exposure_type,    
+         print.byvar = FALSE                   
+  )
   
   dev.off()
-
-# eggers test
-eggers <- metabias(result2, method.bias = "linreg")
-eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
-eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
-
-# funnel plot
-funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[["ever"]])
-sanitized_label <- gsub("[/\\?<>\\:*|\"]", "-", funnel_label)
-funnel_filename <- paste0("Plots/viral suppression/funnel plots/", sanitized_label, ".png")
-
-png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
-funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
-dev.off()
 }
 
 # loop for lifetime violence
@@ -295,6 +281,16 @@ process_and_plot(
 )
 
 ## sensitivity analysis
+
+# left columns and labels for each exposure
+leftcols <- list(
+  recent = leftcols_recent,
+  ever = leftcols_lifetime
+)
+leftlabs <- list(
+  recent = leftlabs_recent,
+  ever = leftlabs_lifetime
+)
 
 # run for recent and ever violence, art use and rho = 0.4
 for (exposure in c("Recent", "Ever")) {

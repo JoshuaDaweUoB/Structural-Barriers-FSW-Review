@@ -273,10 +273,7 @@ perform_all_violence_analysis_rho1 <- function(df, analysis, exposure) {
     filter(!is.na(.data[[var_names[[analysis]]$est]]))
    
   # study_num and effect_num columns
-  filtered_df <- filtered_df %>%
-    arrange(exposure_type, study) %>%
-    mutate(effect_num = row_number()) %>%
-    mutate(study_num = cumsum(!duplicated(study))) 
+  filtered_df <- create_study_effect_nums(filtered_df)
 
   # covariance matrix assuming constant sampling correlation
   V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
@@ -284,6 +281,11 @@ perform_all_violence_analysis_rho1 <- function(df, analysis, exposure) {
                                     r = 0.4,
                                     smooth_vi = TRUE)
   
+    if (nrow(filtered_df) <= 1) {
+    message(paste("Skipping", analysis, exposure, ": k <=", nrow(filtered_df)))
+    return(NULL)
+  }
+
   # multilevel random effects model using `rma.mv` from metafor
   result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
                    V = V_mat, 
@@ -305,7 +307,6 @@ perform_all_violence_analysis_rho1 <- function(df, analysis, exposure) {
     common = FALSE,
     random = TRUE, 
     backtransf = TRUE,
-    subgroup = filtered_df$exposure_type,  # subgroup by exposure_type
     text.random = "Overall"
   )
   
@@ -335,11 +336,11 @@ perform_all_violence_analysis_rho1 <- function(df, analysis, exposure) {
     overall.hetstat = TRUE,
     overall = TRUE,
     labeltext = TRUE,
-    col.subgroup = "black",
-    print.subgroup.name = TRUE # show subgroup names
+    col.subgroup = "black"
   )
   
-  dev.off()}
+  dev.off()
+}
 
 # function to analyse violence overall with rho = 0.8
 perform_all_violence_analysis_rho2 <- function(df, analysis, exposure) {
@@ -350,10 +351,7 @@ perform_all_violence_analysis_rho2 <- function(df, analysis, exposure) {
     filter(!is.na(.data[[var_names[[analysis]]$est]]))
    
   # study_num and effect_num columns
-  filtered_df <- filtered_df %>%
-    arrange(exposure_type, study) %>%
-    mutate(effect_num = row_number()) %>%
-    mutate(study_num = cumsum(!duplicated(study))) 
+  filtered_df <- create_study_effect_nums(filtered_df)
 
   # covariance matrix assuming constant sampling correlation
   V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
@@ -361,6 +359,11 @@ perform_all_violence_analysis_rho2 <- function(df, analysis, exposure) {
                                     r = 0.8,
                                     smooth_vi = TRUE)
   
+    if (nrow(filtered_df) <= 1) {
+    message(paste("Skipping", analysis, exposure, ": k <=", nrow(filtered_df)))
+    return(NULL)
+  }
+
   # multilevel random effects model using `rma.mv` from metafor
   result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
                    V = V_mat, 
@@ -382,7 +385,6 @@ perform_all_violence_analysis_rho2 <- function(df, analysis, exposure) {
     common = FALSE,
     random = TRUE, 
     backtransf = TRUE,
-    subgroup = filtered_df$exposure_type,  # subgroup by exposure_type
     text.random = "Overall"
   )
   
@@ -412,8 +414,8 @@ perform_all_violence_analysis_rho2 <- function(df, analysis, exposure) {
     overall.hetstat = TRUE,
     overall = TRUE,
     labeltext = TRUE,
-    col.subgroup = "black",
-    print.subgroup.name = TRUE # show subgroup names
+    col.subgroup = "black"
   )
   
-  dev.off()}
+  dev.off()
+}

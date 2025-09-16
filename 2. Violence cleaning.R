@@ -36,7 +36,7 @@ fsw_data_other_recent  <- fsw_data_all %>% filter(outcome == "HIV prevalence", e
 
 # HIV incidence data
 fsw_data_incidence <- fsw_data_all %>% filter(outcome == "HIV incidence")
-View(fsw_data_incidence)
+
 # ART data
 fsw_data_art <- fsw_data_all %>% filter(outcome_bin %in% c("ART use", "ART adherence"))
 
@@ -44,8 +44,8 @@ fsw_data_art <- fsw_data_all %>% filter(outcome_bin %in% c("ART use", "ART adher
 fsw_data_vs <- fsw_data_all %>% filter(outcome == "Viral suppression")
 
 # define dataframes
-dfs <- c("fsw_data_all", "fsw_data_test", "fsw_data_pv_ever", "fsw_data_pv_recent", "fsw_data_sv_ever", "fsw_data_sv_recent", "fsw_data_psv_ever", "fsw_data_psv_recent", "fsw_data_art", "fsw_data_vs", "fsw_data_other", "fsw_data_other_recent", "fsw_data_other_ever")
-
+dfs <- c("fsw_data_all", "fsw_data_test", "fsw_data_incidence", "fsw_data_pv_ever", "fsw_data_pv_recent", "fsw_data_sv_ever", "fsw_data_sv_recent", "fsw_data_psv_ever", "fsw_data_psv_recent", "fsw_data_art", "fsw_data_vs", "fsw_data_other", "fsw_data_other_recent", "fsw_data_other_ever")
+View(fsw_data_incidence)
 # data cleaning
 
 # convert to numeric and log transform

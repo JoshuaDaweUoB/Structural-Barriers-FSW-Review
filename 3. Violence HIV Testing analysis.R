@@ -295,6 +295,158 @@ process_and_plot(
   output_plot_filename = "Plots/subgroups/ever_test_subgroup.png"
 )
 
+# violence type subgroup
+
+# recent violence
+perform_analysis_recent <- function(df, analysis) {
+ 
+  # filter
+  filtered_df <- df %>% filter(exposure_tf_bin == "Recent", !is.na(.[[var_names[[analysis]]$est]]))
+  
+  # study_num and effect_num columns
+  filtered_df <- create_study_effect_nums(filtered_df)
+
+  # covariance matrix assuming constant sampling correlation
+  V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
+                                    cluster = filtered_df$study_num,
+                                    r = rho,
+                                    smooth_vi = TRUE)
+  
+  # multilevel random effects
+  result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
+                   V = V_mat, 
+                   random = ~ 1 | study_num / effect_num,
+                   data = filtered_df,   
+                   sparse = TRUE)       
+  
+  print(paste("RECENT", analysis, "analysis:"))
+  print(result)
+  print(exp(coef(result)))
+  
+  # analysis with subgroup by exposure_type
+  result2 <- metagen(
+    TE = filtered_df[[var_names[[analysis]]$est]],
+    lower = filtered_df[[var_names[[analysis]]$lower]],
+    upper = filtered_df[[var_names[[analysis]]$upper]],
+    studlab = filtered_df$study,
+    data = filtered_df,
+    sm = "OR",
+    method.tau = "REML",
+    common = FALSE,
+    random = TRUE, 
+    backtransf = TRUE,
+    byvar = filtered_df$exposure_type,   # subgroup here
+    text.random = "Overall",
+    print.byvar = FALSE
+  )
+  
+  print(summary(result2))
+  
+  result2$TE.random <- result$b
+  result2$lower.random <- result$ci.lb
+  result2$upper.random <- result$ci.ub
+  
+  filename <- paste0("Plots/testing/", analysis, "_recent_testing_violence_type.png")
+  png(filename = filename, width = 55, height = 14, units = "cm", res = 600)
+  
+  forest(result2,
+         sortvar = filtered_df$study,
+         xlim = c(0.2, 4),             
+         leftcols = leftcols_recent, 
+         leftlabs = leftlabs_recent,
+         rightcols = rightcols,
+         rightlabs = rightlabs,
+         pooled.totals = TRUE,
+         xintercept = 1,
+         addrow.overall = TRUE,
+         overall.hetstat = TRUE,
+         overall = TRUE,
+         labeltext = TRUE,
+         col.subgroup = "black",
+         byvar = filtered_df$exposure_type, # subgroup here
+         print.byvar = FALSE
+  )
+  
+  dev.off()
+}
+
+# lifetime violence
+perform_analysis_ever <- function(df, analysis) {
+  # filter
+  filtered_df <- df %>% filter(exposure_tf_bin == "Ever", !is.na(.[[var_names[[analysis]]$est]]))
+  
+  # study_num and effect_num columns
+  filtered_df <- create_study_effect_nums(filtered_df)
+
+  # covariance matrix assuming constant sampling correlation
+  V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
+                                    cluster = filtered_df$study_num,
+                                    r = rho,
+                                    smooth_vi = TRUE)
+  
+  # multilevel random effects model using `rma.mv` from metafor
+  result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
+                   V = V_mat, 
+                   random = ~ 1 | study_num / effect_num,
+                   data = filtered_df,   
+                   sparse = TRUE)       
+  
+  print(paste("EVER", analysis, "analysis:"))
+  print(result)
+  print(exp(coef(result)))
+  
+  result2 <- metagen(
+    TE = filtered_df[[var_names[[analysis]]$est]],
+    lower = filtered_df[[var_names[[analysis]]$lower]],
+    upper = filtered_df[[var_names[[analysis]]$upper]],
+    studlab = filtered_df$study,
+    data = filtered_df,
+    sm = "OR",
+    method.tau = "REML",
+    common = FALSE,
+    random = TRUE, 
+    backtransf = TRUE,
+    byvar = filtered_df$exposure_type,   # subgroup here
+    text.random = "Overall",
+    print.byvar = FALSE    
+  )
+  
+  print(summary(result2))
+  
+  result2$TE.random <- result$b
+  result2$lower.random <- result$ci.lb
+  result2$upper.random <- result$ci.ub
+  
+  filename <- paste0("Plots/testing/", analysis, "_ever_testing_violence_type.png")
+  png(filename = filename, width = 45, height = 25, units = "cm", res = 600)
+  
+  forest(result2,
+         sortvar = filtered_df$study,
+         xlim = c(0.2, 4),
+         leftcols = leftcols_lifetime,
+         leftlabs = leftlabs_lifetime,
+         rightcols = rightcols,
+         rightlabs = rightlabs,
+         pooled.totals = TRUE,
+         xintercept = 1,
+         addrow.overall = TRUE,
+         overall.hetstat = TRUE,
+         overall = TRUE,
+         labeltext = TRUE,
+         col.subgroup = "black",
+         byvar = filtered_df$exposure_type, # subgroup here
+         print.byvar = FALSE
+  )
+  
+  dev.off()
+}
+
+# loop over each analysis
+for (analysis in analyses) {
+  perform_analysis_recent(fsw_data_test, analysis)
+  perform_analysis_ever(fsw_data_test, analysis)
+}
+
 ## sensitivity analysis
 
 # run for recent and ever violence and rho = 0.4
