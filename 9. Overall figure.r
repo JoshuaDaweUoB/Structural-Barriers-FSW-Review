@@ -33,7 +33,7 @@ summary_hiv_violence <- metagen(TE = effect_ln,
   print(summary(summary_hiv_violence))
   
   # save forest plot
-  png(filename = "Plots/overall plots/violence_all_analyses.png", width = 30, height = 28, units = "cm", res = 600)
+  png(filename = "Plots/overall plots/violence_all_analyses.png", width = 30, height = 40, units = "cm", res = 600)
   forest(summary_hiv_violence, 
          sortvar = outcome,
          xlim = c(0.2, 4),             

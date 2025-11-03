@@ -370,6 +370,16 @@ perform_analysis_recent <- function(df, analysis) {
   dev.off()
 }
 
+# left columns and labels for each exposure
+leftcols <- list(
+  recent = leftcols_recent,
+  ever = leftcols_lifetime
+)
+leftlabs <- list(
+  recent = leftlabs_recent,
+  ever = leftlabs_lifetime
+)
+
 # lifetime violence
 perform_analysis_ever <- function(df, analysis) {
   # filter
