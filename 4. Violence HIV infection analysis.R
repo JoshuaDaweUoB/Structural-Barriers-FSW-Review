@@ -152,7 +152,7 @@ perform_all_violence_analysis <- function(df, analysis, exposure) {
   
   # create folder 
   filename <- paste0("Plots/prevalence/all violence/all_violence_", tolower(exposure), "_", analysis, ".png")
-  png(filename = filename, width = 60, height = 55, units = "cm", res = 300)
+  png(filename = filename, width = 80, height = 60, units = "cm", res = 600) 
   
   forest(
     result2,

@@ -94,7 +94,6 @@ perform_analysis_recent <- function(df, analysis) {
     common = FALSE,
     random = TRUE, 
     backtransf = TRUE,
-    byvar = filtered_df$outcome_tf_bin,
     text.random = "Overall",
     print.byvar = FALSE
   )
@@ -185,7 +184,6 @@ perform_analysis_ever <- function(df, analysis) {
     common = FALSE,
     random = TRUE, 
     backtransf = TRUE,
-    byvar = filtered_df$outcome_tf_bin, 
     text.random = "Overall",
     print.byvar = FALSE    
   )
@@ -335,7 +333,7 @@ perform_analysis_recent <- function(df, analysis) {
     common = FALSE,
     random = TRUE, 
     backtransf = TRUE,
-    byvar = filtered_df$exposure_type,   # subgroup here
+    byvar = filtered_df$exposure_type,
     text.random = "Overall",
     print.byvar = FALSE
   )
@@ -363,7 +361,7 @@ perform_analysis_recent <- function(df, analysis) {
          overall = TRUE,
          labeltext = TRUE,
          col.subgroup = "black",
-         byvar = filtered_df$exposure_type, # subgroup here
+         byvar = filtered_df$exposure_type,
          print.byvar = FALSE
   )
   
