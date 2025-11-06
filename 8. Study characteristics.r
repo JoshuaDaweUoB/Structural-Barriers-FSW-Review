@@ -341,3 +341,63 @@ for (df_name in dfs_studies) {
 
 print(summary_table)
 write_xlsx(summary_table, "Summary Table.xlsx")
+
+## study estimates tables
+formatted_data <- fsw_data_all %>%
+  select(
+    author = author,
+    year = year,
+    violence_definition = exposure_definition_short,
+    violence_time_frame = exposure_time_frame,
+    exposed_num = exposed_num,
+    exposed_perc = exposed_perc,
+    perpetrator = perpetrator,
+    outcome = outcome,
+    unadj_effect = unadj_est,
+    unadj_lower = un_lower,
+    unadj_upper = un_upper,
+    adj_effect = adj_est,
+    adj_lower = adj_lower,
+    adj_upper = adj_upper,
+    exposure_type = exposure_type
+  ) %>%
+  mutate(
+    exposed_num = as.numeric(exposed_num),
+    exposed_perc = as.numeric(exposed_perc),
+    author_year = paste0(author, " (", year, ")"),
+    exposed = ifelse(!is.na(exposed_num) & !is.na(exposed_perc),
+                     paste0(exposed_num, " (", round(exposed_perc * 100, 0), "%)"),
+                     "NR"),
+    perpetrator = ifelse(is.na(perpetrator), "Any perpetrator", perpetrator),
+    unadj_ci = ifelse(!is.na(unadj_effect), 
+                      paste0("OR: ", trimws(format(round(unadj_effect, 2), nsmall = 2)), " (", 
+                             trimws(format(round(unadj_lower, 2), nsmall = 2)), "–", 
+                             trimws(format(round(unadj_upper, 2), nsmall = 2)), ")"), 
+                      NA),
+    adj_ci = ifelse(!is.na(adj_effect), 
+                    paste0("aOR: ", trimws(format(round(adj_effect, 2), nsmall = 2)), " (", 
+                           trimws(format(round(adj_lower, 2), nsmall = 2)), "–", 
+                           trimws(format(round(adj_upper, 2), nsmall = 2)), ")"), 
+                    NA),
+    effect_size = paste0(
+      ifelse(!is.na(unadj_ci), unadj_ci, ""),
+      ifelse(!is.na(unadj_ci) & !is.na(adj_ci), "; ", ""),
+      ifelse(!is.na(adj_ci), adj_ci, "")
+    )
+  ) %>%
+  select(
+    `Author (year)` = author_year,
+    `Violence definition` = violence_definition,
+    `Violence time frame` = violence_time_frame,
+    `Exposed, n (%)` = exposed,
+    `Perpetrator` = perpetrator,
+    `Outcome` = outcome, 
+    `Effect size (95% CI)` = effect_size,
+    `Violence type` = exposure_type
+  )
+
+violence_sheets <- split(formatted_data, formatted_data$`Violence type`)
+names(violence_sheets) <- names(violence_sheets) %>%
+  str_replace_all("[\\[\\]:*?/\\\\]", "_") 
+
+write_xlsx(violence_sheets, "Formatted Violence Data by Type.xlsx")
