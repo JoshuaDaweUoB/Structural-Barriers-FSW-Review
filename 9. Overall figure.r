@@ -6,8 +6,8 @@ pacman::p_load("meta", "metafor", "readxl", "openxlsx", "tidyverse", "kableExtra
 setwd("C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence")
 
 # load data
-fsw_data_overall <- read_excel("Violence estimates.xlsx", "All studies") 
-
+fsw_data_overall <- read_excel("Violence estimates.xlsx", "All studies") %>%
+  filter(adjust == "Combined")
 
 # settings
 settings.meta(CIbracket = "(") 
@@ -37,8 +37,8 @@ summary_hiv_violence <- metagen(TE = effect_ln,
   forest(summary_hiv_violence, 
          sortvar = outcome,
          xlim = c(0.2, 4),             
-         leftcols = c("violence", "name", "adjust"), 
-         leftlabs = c("Violence exposure", "Exposure time frame", "Adjustment"),
+         leftcols = c("violence", "name"), 
+         leftlabs = c("Violence exposure", "Exposure time frame"),
          rightcols = c("or_95", "i2", "studies", "estimates"), 
          rightlabs = c("OR (95% CI)", "I²", "Nb studies", "Nb estimates"), 
          pooled.totals = FALSE,
@@ -80,8 +80,8 @@ fsw_data_overall_ever$i2 <- paste0(fsw_data_overall_ever$i2, "%")  # Add percent
   forest(summary_hiv_violence_ever, 
          sortvar = outcome,
          xlim = c(0.2, 4),             
-         leftcols = c("violence", "adjust"), 
-         leftlabs = c("Violence exposure", "Adjustment"),
+         leftcols = c("violence"), 
+         leftlabs = c("Violence exposure"),
          rightcols = c("or_95", "i2", "studies", "estimates"), 
          rightlabs = c("Pooled OR (95% CI)", "I²", "Nb studies", "Nb estimates"), 
          pooled.totals = FALSE,
@@ -123,9 +123,9 @@ fsw_data_overall_recent$i2 <- paste0(fsw_data_overall_recent$i2, "%")  # Add per
   forest(summary_hiv_violence_rec, 
          sortvar = outcome,
          xlim = c(0.2, 4),             
-         leftcols = c("violence", "adjust"), 
+         leftcols = c("violence"), 
          leftlabs = c("Violence exposure", "Adjustment"),
-         rightcols = c("or_95", "i2", "studies", "estimates"), 
+         rightcols = c("or_95", "i2", "studies"), 
          rightlabs = c("Pooled OR (95% CI)", "I²", "Nb studies", "Nb estimates"), 
          pooled.totals = FALSE,
          xintercept = 1,

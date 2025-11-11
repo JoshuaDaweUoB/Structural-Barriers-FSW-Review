@@ -88,7 +88,7 @@ create_study_effect_nums <- function(df) {
 ## subgroup function
 
 # list for loops and functions
-subgroup_columns <- c("ldc_bin", "lmic_bin", "who_region", "pre_2016", "recruitment", "perpetrator", "rob_score_3cat")
+subgroup_columns <- c("ldc_bin", "lmic_bin", "who_region", "pre_2017", "recruitment", "perpetrator", "rob_score_3cat")
 
 # function meta analysis
 process_and_plot <- function(data, data_name, output_plot_filename) {
@@ -201,8 +201,8 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
     mutate(subgroup_level = case_when(
     subgroup_level == "bin_no" ~ "No",
     subgroup_level == "bin_yes" ~ "Yes",
-    subgroup_level == "2016_FALSE" ~ "No",
-    subgroup_level == "2016_TRUE" ~ "Yes",
+    subgroup_level == "2017_FALSE" ~ "No",
+    subgroup_level == "2017_TRUE" ~ "Yes",
     subgroup_level == "region_African Region" ~ "African Region",
     subgroup_level == "region_Region of the Americas" ~ "Region of the Americas",
     subgroup_level == "region_South-East Asia Region" ~ "South-East Asia Region",
@@ -217,7 +217,7 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
     mutate(subgroup = case_when(
       subgroup == "ldc" ~ "Least developed country",
       subgroup == "lmic" ~ "Lower-middle income country",
-      subgroup == "pre" ~ "Published before 2016",
+      subgroup == "pre" ~ "Published before 2017",
       subgroup == "recruitment" ~ "Recruitment",
       subgroup == "perpetrator" ~ "Perpetrator",
       subgroup == "who" ~ "WHO region",

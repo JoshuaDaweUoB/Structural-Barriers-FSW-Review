@@ -375,16 +375,6 @@ for (violence in violence_types) {
   dev.off()
 }
 
-
-
-
-
-
-
-
-
-
-
 ## subgroup analysis 
 
 # function for "recently exposed to any violence"
