@@ -1,6 +1,22 @@
 # Load required packages
 pacman::p_load("readxl", "writexl", "tidyverse", "metafor")
 
+# hiv prev studies
+fsw_data_prev <- create_study_effect_nums(fsw_data_prev)
+
+# one row per study
+fsw_data_prev <- fsw_data_prev %>%
+  arrange(study) %>%
+  group_by(study) %>%
+  mutate(sequence = row_number()) %>%
+  ungroup() %>%
+  filter(sequence == 1)
+
+n_unique_studies <- n_distinct(fsw_data_prev$study)
+print(n_unique_studies)
+
+
+
 # sequence study ids
 fsw_data_all <- create_study_effect_nums(fsw_data_all)
 
@@ -14,6 +30,51 @@ all_studies <- fsw_data_all %>%
 
 n_unique_studies <- n_distinct(all_studies$study)
 print(n_unique_studies)
+
+## this is a mistake - need to filter by prevalence first
+## also need to think about exp_prop 
+
+# Create categories for hiv_perc2
+hiv_prevalence_studies <- fsw_data_prev %>%
+  mutate(
+    hiv_perc_cat = case_when(
+      hiv_perc2 >= 0 & hiv_perc2 < 0.1 ~ "0-0.1",
+      hiv_perc2 >= 0.1 & hiv_perc2 < 0.25 ~ "0.1-0.25",
+      hiv_perc2 >= 0.25 & hiv_perc2 < 0.50 ~ "0.25-0.50",
+      hiv_perc2 >= 0.50 ~ "0.50+",
+      TRUE ~ NA_character_
+    ),
+    hiv_perc_cat = factor(hiv_perc_cat, levels = c("0-0.1", "0.1-0.25", "0.25-0.50", "0.50+"))
+  )
+
+# Summarize hiv_perc_cat by sample_size_cat
+summary_table <- hiv_prevalence_studies %>%
+  group_by(sample_size_cat, hiv_perc_cat) %>%
+  summarise(
+    count = n(),  # Count the number of studies in each category
+    percentage = round((n() / sum(n())) * 100, 2)  # Calculate percentage within each sample_size_cat
+  ) %>%
+  ungroup()
+
+# Print the summary table
+print(summary_table)
+
+# Create sample_size_quartile (quartiles for sample_size)
+hiv_prevalence_studies <- hiv_prevalence_studies %>%
+  mutate(
+    sample_size_quartile = ntile(sample_size, 4)  # Divide sample_size into 4 quartiles
+  )
+
+# Calculate the average hiv_perc2 within each sample_size_quartile
+average_hiv_prev <- hiv_prevalence_studies %>%
+  group_by(sample_size_quartile) %>%
+  summarise(
+    avg_hiv_prev = mean(hiv_perc2, na.rm = TRUE),  # Calculate the mean, ignoring NAs
+    n = n()  # Count the number of studies in each quartile
+  )
+
+# Print the result
+print(average_hiv_prev)
 
 # study characteristics
 all_studies <- all_studies %>%

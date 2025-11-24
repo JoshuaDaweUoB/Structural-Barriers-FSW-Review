@@ -56,7 +56,7 @@ format_violence_data_unadj <- function(df) {
 format_violence_data_adj <- function(df) {
   df$effect_adj_str <- sprintf("%.2f", df$adj_est)
   df$adj_lower_str <- sprintf("%.2f", df$adj_lower)
-  df$adj_upper_str <- sprintf("%.2f", df$adj_lower)
+  df$adj_upper_str <- sprintf("%.2f", df$adj_upper)
   df$adj_or_95 <- paste0(df$adj_lower_str, "–", df$adj_upper_str)
   df$adj_or_95_2 <- paste0(df$effect_adj__str, " (", df$adj_or_95, ")")
   return(df)
