@@ -9,17 +9,17 @@ settings.meta(CIbracket = "(")
 settings.meta(CIseparator = "-") 
 
 # columns
-leftcols_recent <- c("study", "study_num", "effect_num", "exposure_definition_short", "exposure_time_frame", "perpetrator", "country")
-leftlabs_recent <- c("Study", "Study number", "Effect number", "Exposure definition", "Exposure time frame", "Perpetrator", "Country")
+leftcols_ever <- c("study", "study_num", "effect_num", "exposure_definition_short", "perpetrator", "country")
+leftlabs_ever <- c("Study", "Study number", "Effect number", "Exposure definition", "Perpetrator", "Country")
 rightcols <- c("effect", "ci")
 rightlabs = c("Estimate", "95% CI")
 
 # constant sampling correlation
 rho <- 0.6
 
-# recent exposure and non-missing RR effect
+# ever exposure and non-missing RR effect
 filtered_df <- fsw_data_incidence %>%
-  filter(exposure_tf_bin == "Recent", !is.na(effect_best_ln))
+  filter(exposure_tf_bin == "Ever", !is.na(effect_best_ln))
 
 # study_num and effect_num columns
 filtered_df <- create_study_effect_nums(filtered_df)
@@ -62,13 +62,13 @@ result2$lower.random <- result$ci.lb
 result2$upper.random <- result$ci.ub
 
 # save forest plot
-filename <- "Plots/incidence/recent_best_incidence_rr.png"
+filename <- "Plots/incidence/ever_best_incidence_rr.png"
 png(filename = filename, width = 45, height = 14, units = "cm", res = 600)
 forest(result2,
        sortvar = filtered_df$study,
        xlim = c(0.2, 4),             
-       leftcols = leftcols_recent, 
-       leftlabs = leftlabs_recent,
+       leftcols = leftcols_ever, 
+       leftlabs = leftlabs_ever,
        rightcols = rightcols,
        rightlabs = rightlabs,
        pooled.totals = TRUE,
@@ -83,7 +83,7 @@ dev.off()
 
 # unadjusted analysis
 filtered_df_unadj <- fsw_data_incidence %>%
-  filter(exposure_tf_bin == "Recent", !is.na(unadj_est_ln))
+  filter(exposure_tf_bin == "Ever", !is.na(unadj_est_ln))
 
 filtered_df_unadj <- create_study_effect_nums(filtered_df_unadj)
 
@@ -124,13 +124,13 @@ result2_unadj$TE.random <- result_unadj$b
 result2_unadj$lower.random <- result_unadj$ci.lb
 result2_unadj$upper.random <- result_unadj$ci.ub
 
-filename_unadj <- "Plots/incidence/recent_unadj_incidence_rr.png"
+filename_unadj <- "Plots/incidence/ever_unadj_incidence_rr.png"
 png(filename = filename_unadj, width = 45, height = 14, units = "cm", res = 600)
 forest(result2_unadj,
        sortvar = filtered_df_unadj$study,
        xlim = c(0.2, 4),             
-       leftcols = leftcols_recent, 
-       leftlabs = leftlabs_recent,
+       leftcols = leftcols_ever, 
+       leftlabs = leftlabs_ever,
        rightcols = rightcols,
        rightlabs = rightlabs,
        pooled.totals = TRUE,
@@ -145,7 +145,7 @@ dev.off()
 
 # adjusted analysis
 filtered_df_adj <- fsw_data_incidence %>%
-  filter(exposure_tf_bin == "Recent", !is.na(adj_est_ln))
+  filter(exposure_tf_bin == "Ever", !is.na(adj_est_ln))
 
 filtered_df_adj <- create_study_effect_nums(filtered_df_adj)
 
@@ -183,13 +183,13 @@ result2_adj$TE.random <- result_adj$b
 result2_adj$lower.random <- result_adj$ci.lb
 result2_adj$upper.random <- result_adj$ci.ub
 
-filename_adj <- "Plots/incidence/recent_adj_incidence_rr.png"
+filename_adj <- "Plots/incidence/ever_adj_incidence_rr.png"
 png(filename = filename_adj, width = 45, height = 14, units = "cm", res = 600)
 forest(result2_adj,
        sortvar = filtered_df_adj$study,
        xlim = c(0.2, 4),             
-       leftcols = leftcols_recent, 
-       leftlabs = leftlabs_recent,
+       leftcols = leftcols_ever, 
+       leftlabs = leftlabs_ever,
        rightcols = rightcols,
        rightlabs = rightlabs,
        pooled.totals = TRUE,
@@ -210,7 +210,7 @@ eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
 eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
 
 # Funnel plot
-funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[["recent"]])
+funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[["Ever"]])
 sanitized_label <- gsub("[/\\?<>\\:*|\"]", "-", funnel_label)
 funnel_filename <- paste0("Plots/incidence/funnel plots/", sanitized_label, ".png")
 
@@ -272,11 +272,11 @@ dev.off()
 
 ## subgroup analysis 
 
-# function for "recently exposed to any violence"
+# function for "everly exposed to any violence"
 process_and_plot(
   data = filtered_df,
-  data_name = "filtered_df_recent_incidence",
-  output_plot_filename = "Plots/subgroups/recent_any_violence_incidence_subgroup.png"
+  data_name = "filtered_df_ever_incidence",
+  output_plot_filename = "Plots/subgroups/ever_any_violence_incidence_subgroup.png"
 )
 
 ## sensitivity analysis
@@ -289,9 +289,9 @@ dir.create("Plots/sensitivity/", recursive = TRUE, showWarnings = FALSE)
 
 # Loop through each rho value
 for (rho in rho_values) {
-  # Filter for recent exposure and non-missing RR effect
+  # Filter for ever exposure and non-missing RR effect
   filtered_df <- fsw_data_incidence %>%
-    filter(exposure_tf_bin == "Recent", !is.na(effect_best_ln))
+    filter(exposure_tf_bin == "ever", !is.na(effect_best_ln))
   
   # Create study_num and effect_num columns
   filtered_df <- create_study_effect_nums(filtered_df)
@@ -337,13 +337,13 @@ for (rho in rho_values) {
   result2$upper.random <- result$ci.ub
   
   # Save forest plot
-  filename <- paste0("Plots/sensitivity/recent_best_incidence_rho_", gsub("\\.", "_", rho), ".png")
+  filename <- paste0("Plots/sensitivity/ever_best_incidence_rho_", gsub("\\.", "_", rho), ".png")
   png(filename = filename, width = 50, height = 14, units = "cm", res = 600)
   forest(result2,
          sortvar = filtered_df$study,
          xlim = c(0.2, 4),             
-         leftcols = leftcols_recent, 
-         leftlabs = leftlabs_recent,
+         leftcols = leftcols_ever, 
+         leftlabs = leftlabs_ever,
          rightcols = rightcols,
          rightlabs = rightlabs,
          pooled.totals = TRUE,

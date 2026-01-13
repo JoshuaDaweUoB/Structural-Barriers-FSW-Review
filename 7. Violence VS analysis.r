@@ -160,12 +160,17 @@ perform_analysis <- function(df, analysis) {
                                     smooth_vi = TRUE)
   
   # multilevel random effects model using `rma.mv` from metafor
-  result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
-                   V = V_mat, 
-                   random = ~ 1 | study_num / effect_num,
-                   data = filtered_df,   
-                   sparse = TRUE,
-                   control = list(optimizer = "optim", method = "BFGS"))
+  result <- rma.mv(
+    filtered_df[[var_names[[analysis]]$est]],
+    V = V_mat,
+    random = ~ 1 | study_num / effect_num,
+    data = filtered_df,
+    sparse = TRUE,
+    control = list(
+      optimizer = "nlminb",
+      iter.max = 10000,
+      eval.max = 10000,
+      rel.tol = 1e-8))
   
   print(result)
   print(exp(coef(result)))

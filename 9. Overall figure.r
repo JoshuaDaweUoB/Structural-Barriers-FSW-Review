@@ -13,8 +13,8 @@ fsw_data_overall <- read_excel("Violence estimates.xlsx", "All studies") %>%
 settings.meta(CIbracket = "(") 
 settings.meta(CIseparator = "-") 
 
-fsw_data_overall$i2 <- round(fsw_data_overall$i2 * 100, 0)  # Convert i2 to percentage and round to no decimals
-fsw_data_overall$i2 <- paste0(fsw_data_overall$i2, "%")  # Add percentage sign to i2 values
+fsw_data_overall$i2 <- round(fsw_data_overall$i2 * 100, 0)
+fsw_data_overall$i2 <- paste0(fsw_data_overall$i2, "%")
 
 # meta-analysis
 summary_hiv_violence <- metagen(TE = effect_ln,
@@ -53,11 +53,10 @@ summary_hiv_violence <- metagen(TE = effect_ln,
   dev.off()
 
 ## lifetime analysis only 
-fsw_data_overall_ever <- read_excel("Violence estimates.xlsx", "All studies") 
+fsw_data_overall_ever <- fsw_data_overall
 fsw_data_overall_ever <- fsw_data_overall_ever %>% filter(name == "Lifetime")
 
-fsw_data_overall_ever$i2 <- round(fsw_data_overall_ever$i2 * 100, 0)  # Convert i2 to percentage and round to no decimals
-fsw_data_overall_ever$i2 <- paste0(fsw_data_overall_ever$i2, "%")  # Add percentage sign to i2 values
+fsw_data_overall_ever$i2 <- round(fsw_data_overall_ever$i2 * 100, 0)
 
 # meta-analysis
   summary_hiv_violence_ever <- metagen(TE = effect_ln,
@@ -96,11 +95,10 @@ fsw_data_overall_ever$i2 <- paste0(fsw_data_overall_ever$i2, "%")  # Add percent
   dev.off()
 
 ## recent analysis only 
-fsw_data_overall_recent <- read_excel("Violence estimates.xlsx", "All studies") 
+fsw_data_overall_recent <- fsw_data_overall
 fsw_data_overall_recent <- fsw_data_overall_recent %>% filter(name == "Recent")
 
-fsw_data_overall_recent$i2 <- round(fsw_data_overall_recent$i2 * 100, 0)  # Convert i2 to percentage and round to no decimals
-fsw_data_overall_recent$i2 <- paste0(fsw_data_overall_recent$i2, "%")  # Add percentage sign to i2 values
+fsw_data_overall_recent$i2 <- round(fsw_data_overall_recent$i2 * 100, 0)
 
 # meta-analysis
   summary_hiv_violence_rec <- metagen(TE = effect_ln,

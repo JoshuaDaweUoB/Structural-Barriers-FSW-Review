@@ -15,8 +15,6 @@ fsw_data_prev <- fsw_data_prev %>%
 n_unique_studies <- n_distinct(fsw_data_prev$study)
 print(n_unique_studies)
 
-
-
 # sequence study ids
 fsw_data_all <- create_study_effect_nums(fsw_data_all)
 
@@ -31,48 +29,51 @@ all_studies <- fsw_data_all %>%
 n_unique_studies <- n_distinct(all_studies$study)
 print(n_unique_studies)
 
-## this is a mistake - need to filter by prevalence first
-## also need to think about exp_prop 
-
-# Create categories for hiv_perc2
+# Create categories for hiv_perc
 hiv_prevalence_studies <- fsw_data_prev %>%
   mutate(
+    hiv_perc = as.numeric(hiv_perc),
     hiv_perc_cat = case_when(
-      hiv_perc2 >= 0 & hiv_perc2 < 0.1 ~ "0-0.1",
-      hiv_perc2 >= 0.1 & hiv_perc2 < 0.25 ~ "0.1-0.25",
-      hiv_perc2 >= 0.25 & hiv_perc2 < 0.50 ~ "0.25-0.50",
-      hiv_perc2 >= 0.50 ~ "0.50+",
+      hiv_perc >= 0 & hiv_perc < 0.1 ~ "0-0.1",
+      hiv_perc >= 0.1 & hiv_perc < 0.25 ~ "0.1-0.25",
+      hiv_perc >= 0.25 & hiv_perc < 0.50 ~ "0.25-0.50",
+      hiv_perc >= 0.50 ~ "0.50+",
       TRUE ~ NA_character_
     ),
     hiv_perc_cat = factor(hiv_perc_cat, levels = c("0-0.1", "0.1-0.25", "0.25-0.50", "0.50+"))
+  ) %>%
+  mutate(
+    sample_size_cat = case_when(
+      analytical_sample_size > 0 & analytical_sample_size < 200 ~ "<200",
+      analytical_sample_size >= 200  & analytical_sample_size < 500 ~ "200-499",
+      analytical_sample_size >= 500  & analytical_sample_size < 1000 ~ "500-999",
+      analytical_sample_size >= 1000 ~ "1000+",
+    )
   )
 
 # Summarize hiv_perc_cat by sample_size_cat
 summary_table <- hiv_prevalence_studies %>%
-  group_by(sample_size_cat, hiv_perc_cat) %>%
-  summarise(
-    count = n(),  # Count the number of studies in each category
-    percentage = round((n() / sum(n())) * 100, 2)  # Calculate percentage within each sample_size_cat
-  ) %>%
+  group_by(sample_size_cat) %>%
+  count(hiv_perc_cat) %>%
+  mutate(percentage = round((n / sum(n)) * 100, 2)) %>%
   ungroup()
 
 # Print the summary table
 print(summary_table)
 
-# Create sample_size_quartile (quartiles for sample_size)
+# Create sample_size_quartile
 hiv_prevalence_studies <- hiv_prevalence_studies %>%
   mutate(
-    sample_size_quartile = ntile(sample_size, 4)  # Divide sample_size into 4 quartiles
+    sample_size_quartile = ntile(analytical_sample_size, 4)
   )
 
-# Calculate the average hiv_perc2 within each sample_size_quartile
+# Calculate the average hiv_perc within each sample_size_quartile
 average_hiv_prev <- hiv_prevalence_studies %>%
   group_by(sample_size_quartile) %>%
   summarise(
-    avg_hiv_prev = mean(hiv_perc2, na.rm = TRUE),  # Calculate the mean, ignoring NAs
-    n = n()  # Count the number of studies in each quartile
+    avg_hiv_prev = mean(as.numeric(hiv_perc), na.rm = TRUE),
+    n = n()
   )
-
 # Print the result
 print(average_hiv_prev)
 
@@ -118,33 +119,39 @@ all_studies <- all_studies %>%
   # Select and reorder the columns
   select(
     study,
+    title,
     country,
     who_region,
     design,
     pub_type,
-    sample_size,
+    analytical_sample_size,
+    overall_sample_size,
     exposed_num,
     exposed_perc,
     hiv_num,
     hiv_perc,
     recruitment,
-    rob_score
+    rob_score,
+    rayyan
   ) %>%
 
   # Rename the columns
   rename(
     "study" = study,
+    "Title" = title,
     "Country" = country,
     "WHO region" = who_region,
     "Study design" = design,
     "Publication type" = pub_type,
-    "Sample size" = sample_size,
+    "Analytic sample size" = analytical_sample_size,
+    "Overall sample size" = overall_sample_size,
     "Exposed (n)" = exposed_num,
     "Exposed (%)" = exposed_perc,
     "HIV (n)" = hiv_num,
     "HIV (%)" = hiv_perc,
     "Recruitment strategy" = recruitment,
-    "ROB score" = rob_score
+    "ROB score" = rob_score,
+    "Identified via search" = rayyan
   )
 
 # save the all_studies dataframe to an Excel file
@@ -185,14 +192,16 @@ print(study_quality_table)
 # Calculate total Sample size and total HIV (n)
 totals_table <- all_studies %>%
   summarise(
-    total_sample_size = sum(as.numeric(`Sample size`), na.rm = TRUE),  # Convert Sample size to numeric and sum
-    total_hiv_n = sum(as.numeric(`HIV (n)`), na.rm = TRUE)             # Convert HIV (n) to numeric and sum
+    total_sample_size = sum(as.numeric(`Analytic sample size`), na.rm = TRUE), 
+    total_hiv_n = sum(as.numeric(`HIV (n)`), na.rm = TRUE)   
   )
 
 # Print the totals table
 print(totals_table)
 
 ## total studies for violence types
+violence_df <- fsw_data_all %>%
+  select(study, exposure_tf_bin, outcome, exposure_type, exposed_num, exposed_perc, analytical_sample_size)
 
 # Function to get study and estimate counts
 get_counts <- function(type) {
@@ -221,7 +230,7 @@ missing_exposure <- violence_df %>%
   mutate(
     exposed_num = as.numeric(exposed_num),
     exposed_perc = as.numeric(exposed_perc),
-    sample_size = as.numeric(sample_size)
+    sample_size = as.numeric(analytical_sample_size)
   ) %>%
   filter(is.na(exposed_num) & is.na(exposed_perc))
 
@@ -248,7 +257,7 @@ write_xlsx(violence_summary_tables, "Violence study and estimate counts.xlsx")
 # Filter to relevant columns
 violence_df <- fsw_data_all %>%
   filter(use_exposed == "yes") %>%
-  select(study, exposure_tf_bin, outcome, exposure_type, exposure_definition_short, perpetrator, exposed_num, exposed_perc, sample_size, hiv_num)
+  select(study, exposure_tf_bin, outcome, exposure_type, exposure_definition_short, perpetrator, exposed_num, exposed_perc, analytical_sample_size, hiv_num)
 
 # Define the types of violence and their corresponding sheet names
 violence_types <- c("Physical violence", "Sexual violence", "Physical or sexual", "Other violence")
@@ -306,12 +315,11 @@ dfs_studies <- c(
   "fsw_data_other_ever_studies", "fsw_data_other_recent_studies"
 )
 
-# keep relevant rows
+# keep relevant columns
 for (df_name in dfs_studies) {
   df <- get(df_name)
-  # Keep only the specified columns
   df <- df %>%
-    select(study, exposure_definition_short, perpetrator, exposed_num, exposed_perc, sample_size)
+    select(study, exposure_definition_short, perpetrator, exposed_num, exposed_perc, analytical_sample_size)
   assign(df_name, df, envir = .GlobalEnv)
 }
 
@@ -347,36 +355,51 @@ summary_table <- data.frame(
 
 # pooled proportions table
 for (df_name in dfs_studies) {
+
   df <- get(df_name)
   df$exposed_num <- as.numeric(df$exposed_num)
-  df$sample_size <- as.numeric(df$sample_size)
-  df <- df[!is.na(df$exposed_num) & !is.na(df$sample_size) & df$sample_size > 0 & df$exposed_num >= 0, ]
+  df$analytical_sample_size <- as.numeric(df$analytical_sample_size)
+
+  df <- df[
+    !is.na(df$exposed_num) &
+    !is.na(df$analytical_sample_size) &
+    df$analytical_sample_size > 0 &
+    df$exposed_num >= 0,
+  ]
 
   total_exposed_num <- sum(df$exposed_num)
-  total_sample_size <- sum(df$sample_size)
-  exposed_percentage <- (total_exposed_num / total_sample_size) * 100
+  total_sample_size <- sum(df$analytical_sample_size)
+  exposed_percentage <- 100 * total_exposed_num / total_sample_size
   num_studies <- length(unique(df$study))
   num_estimates <- nrow(df)
 
   if (nrow(df) >= 2) {
+
     escalc_res <- escalc(
       measure = "PLO",
-      xi = as.numeric(df$exposed_num),
-      ni = as.numeric(df$sample_size)
+      xi = df$exposed_num,
+      ni = df$analytical_sample_size
     )
+
     escalc_res$effect_num <- seq_len(nrow(escalc_res))
+
     rma_res <- rma.mv(
       yi, vi,
-      random = ~ 1 | study/effect_num,
+      random = ~ 1 | study / effect_num,
       data = cbind(escalc_res, study = df$study)
     )
-    pred <- predict(rma_res, transf=transf.ilogit)
+
+    pred <- predict(rma_res, transf = transf.ilogit)
+
     pooled_prev <- pred$pred
     pooled_prev_ci <- c(pred$ci.lb, pred$ci.ub)
-    # I2 calculation
-    var_comp <- as.numeric(rma_res$sigma2)
-    total_var <- sum(var_comp) + mean(rma_res$vi)
-    I2 <- 100 * var_comp[1] / total_var
+
+    # I2 (total heterogeneity)
+    sigma2 <- rma_res$sigma2
+    mean_vi <- mean(rma_res$vi)
+    total_var <- sum(sigma2) + mean_vi
+    I2 <- 100 * sum(sigma2) / total_var
+
   } else {
     pooled_prev <- NA
     pooled_prev_ci <- c(NA, NA)

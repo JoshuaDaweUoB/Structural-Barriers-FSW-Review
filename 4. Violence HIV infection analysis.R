@@ -238,9 +238,9 @@ perform_analysis <- function(df, analysis, exposure, violence_type) {
   filtered_df <- df %>% filter(outcome == "HIV prevalence")
   filtered_df <- filtered_df %>% filter(!is.na(filtered_df[[var_names[[analysis]]$est]]))
 
-  # skip if k <= 1
-  if (nrow(filtered_df) <= 1) {
-    message(paste("Skipping", analysis, exposure, "- not enough studies (k <=", nrow(filtered_df), ")"))
+  # make sure no dataframes incorrectly filtered
+  if (nrow(filtered_df) == 0) {
+    message("Skipping: ", violence_type, " ", exposure, " ", analysis, " (no data)")
     return(NULL)
   }
 
@@ -260,11 +260,19 @@ perform_analysis <- function(df, analysis, exposure, violence_type) {
                                     smooth_vi = TRUE)
   
   # multilevel random effects model using `rma.mv` from metafor
-  result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
-                   V = V_mat, 
-                   random = ~ 1 | study_num / effect_num,
-                   data = filtered_df,   
-                   sparse = TRUE)       
+  result <- rma.mv(
+    filtered_df[[var_names[[analysis]]$est]],
+    V = V_mat,
+    random = ~ 1 | study_num / effect_num,
+    data = filtered_df,
+    sparse = TRUE,
+    control = list(
+      optimizer = "nlminb",
+      iter.max = 10000,
+      eval.max = 10000,
+      rel.tol = 1e-8
+    )
+  )    
   
   print(result)
   print(exp(coef(result)))
@@ -272,7 +280,7 @@ perform_analysis <- function(df, analysis, exposure, violence_type) {
   result2 <- metagen(TE = filtered_df[[var_names[[analysis]]$est]],
                      lower = filtered_df[[var_names[[analysis]]$lower]],
                      upper = filtered_df[[var_names[[analysis]]$upper]],
-                     studlab = study,
+                     studlab = filtered_df$study,
                      data = filtered_df,
                      sm = "OR",
                      method.tau = "REML",
@@ -287,9 +295,6 @@ perform_analysis <- function(df, analysis, exposure, violence_type) {
   result2$lower.random <- result$ci.lb
   result2$upper.random <- result$ci.ub
   
-  # create folder
-  dir.create("Plots/prevalence/violence by type", recursive = TRUE, showWarnings = FALSE)
-  
   # filename
   filename <- paste0(
     "Plots/prevalence/violence by type/",
@@ -299,7 +304,7 @@ perform_analysis <- function(df, analysis, exposure, violence_type) {
   png(filename = filename, width = 45, height = 22, units = "cm", res = 600)
   
   forest(result2,
-         sortvar = study,
+         sortvar = filtered_df$study,
          xlim = c(0.2, 4),             
          leftcols = leftcols[[exposure]], 
          leftlabs = leftlabs[[exposure]],
@@ -375,7 +380,7 @@ for (violence in violence_types) {
   dev.off()
 }
 
-## subgroup analysis 
+## subgroup analysis
 
 # function for "recently exposed to any violence"
 process_and_plot(
