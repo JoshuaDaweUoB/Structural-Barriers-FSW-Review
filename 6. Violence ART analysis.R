@@ -69,11 +69,17 @@ perform_analysis_recent_uptake <- function(df, analysis) {
                                     smooth_vi = TRUE)
   
   # multilevel random effects model using `rma.mv` from metafor
-  result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
-                   V = V_mat, 
-                   random = ~ 1 | study_num / effect_num,
-                   data = filtered_df,   
-                   sparse = TRUE)       
+  result <- rma.mv(
+    filtered_df[[var_names[[analysis]]$est]],
+    V = V_mat,
+    random = ~ 1 | study_num / effect_num,
+    data = filtered_df,
+    sparse = TRUE,
+    control = list(
+      optimizer = "nlminb",
+      iter.max = 10000,
+      eval.max = 10000,
+      rel.tol = 1e-8))
   
   print(result)
   print(exp(coef(result)))
@@ -89,7 +95,7 @@ perform_analysis_recent_uptake <- function(df, analysis) {
     common = FALSE,
     random = TRUE, 
     backtransf = TRUE,
-    byvar = filtered_df$exposure_type,   # subgroup by violence type
+    byvar = filtered_df$exposure_type,
     text.random = "Overall",
     print.byvar = FALSE
   )

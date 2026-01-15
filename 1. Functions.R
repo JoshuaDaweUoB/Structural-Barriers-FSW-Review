@@ -88,7 +88,7 @@ create_study_effect_nums <- function(df) {
 ## subgroup function
 
 # list for loops and functions
-subgroup_columns <- c("ldc_bin", "lmic_bin", "who_region", "pre_2017", "recruitment", "perpetrator", "rob_score_3cat")
+subgroup_columns <- c("whoregion", "pre2017", "recruitment", "perpetrator", "representative", "adjust", "rob_score_3cat")
 
 # function meta analysis
 process_and_plot <- function(data, data_name, output_plot_filename) {
@@ -146,7 +146,7 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
   V = V_mat, 
   random = ~ 1 | study_num / effect_num,
   data = filtered_df,
-  control = list(optimizer = "optim", maxiter = 100000, method = "BFGS", stepadj = 0.1),
+  control = list(optimizer = "nlminb", iter.max = 10000, eval.max = 10000, rel.tol = 1e-8, method = "BFGS", stepadj = 0.1),
   sparse = TRUE
 )
                          
@@ -199,29 +199,31 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
   # rename rows
   subgroup_results <- subgroup_results %>%
     mutate(subgroup_level = case_when(
-    subgroup_level == "bin_no" ~ "No",
-    subgroup_level == "bin_yes" ~ "Yes",
-    subgroup_level == "2017_FALSE" ~ "No",
-    subgroup_level == "2017_TRUE" ~ "Yes",
-    subgroup_level == "region_African Region" ~ "African Region",
-    subgroup_level == "region_Region of the Americas" ~ "Region of the Americas",
-    subgroup_level == "region_South-East Asia Region" ~ "South-East Asia Region",
-    subgroup_level == "region_European Region" ~ "European Region",
-    subgroup_level == "region_Eastern Mediterranean Region" ~ "Eastern Mediterranean Region",
-    subgroup_level == "region_Western Pacific Region" ~ "Western Pacific Region",
-    subgroup_level == "score_3cat_Good/ very good" ~ "Good/very good",
-    subgroup_level == "score_3cat_Satisfactory" ~ "Satisfactory",
-    subgroup_level == "score_3cat_Unsatisfactory" ~ "Unsatisfactory",
+    subgroup_level == "pre2017_No" ~ "No",
+    subgroup_level == "pre2017_Yes" ~ "Yes",
+    subgroup_level == "whoregion_African Region" ~ "African Region",
+    subgroup_level == "whoregion_Region of the Americas" ~ "Region of the Americas",
+    subgroup_level == "whoregion_South-East Asia Region" ~ "South-East Asia Region",
+    subgroup_level == "whoregion_European Region" ~ "European Region",
+    subgroup_level == "whoregion_Eastern Mediterranean Region" ~ "Eastern Mediterranean Region",
+    subgroup_level == "whoregion_Western Pacific Region" ~ "Western Pacific Region",
+    subgroup_level == "score_3cat_2" ~ "High",
+    subgroup_level == "score_3cat_1" ~ "Moderate",
+    subgroup_level == "score_3cat_0" ~ "Low",
+    subgroup_level == "representative_Not random sampling" ~ "Not random sampling",
+    subgroup_level == "representative_Random sampling" ~ "Random sampling",
+    subgroup_level == "adjust_Unadjusted" ~ "Unadjusted",
+    subgroup_level == "adjust_Adjusted" ~ "Adjusted",
     TRUE ~ subgroup_level
     )) %>%
     mutate(subgroup = case_when(
-      subgroup == "ldc" ~ "Least developed country",
-      subgroup == "lmic" ~ "Lower-middle income country",
-      subgroup == "pre" ~ "Published before 2017",
+      subgroup == "pre2017" ~ "Published before 2017",
       subgroup == "recruitment" ~ "Recruitment",
       subgroup == "perpetrator" ~ "Perpetrator",
-      subgroup == "who" ~ "WHO region",
-      subgroup == "rob" ~ "Risk of bias score",
+      subgroup == "whoregion" ~ "WHO region",
+      subgroup == "rob" ~ "Study quality",
+      subgroup == "representative" ~ "Representativeness",
+      subgroup == "adjust" ~ "Confounder adjusted",
       TRUE ~ subgroup
     ))
   

@@ -121,8 +121,8 @@ all_studies <- all_studies %>%
     study,
     title,
     country,
-    who_region,
-    design,
+    whoregion,
+    study_design,
     pub_type,
     analytical_sample_size,
     overall_sample_size,
@@ -131,7 +131,7 @@ all_studies <- all_studies %>%
     hiv_num,
     hiv_perc,
     recruitment,
-    rob_score,
+    rob_score_3cat,
     rayyan
   ) %>%
 
@@ -140,8 +140,8 @@ all_studies <- all_studies %>%
     "study" = study,
     "Title" = title,
     "Country" = country,
-    "WHO region" = who_region,
-    "Study design" = design,
+    "WHO region" = whoregion,
+    "Study design" = study_design,
     "Publication type" = pub_type,
     "Analytic sample size" = analytical_sample_size,
     "Overall sample size" = overall_sample_size,
@@ -150,7 +150,7 @@ all_studies <- all_studies %>%
     "HIV (n)" = hiv_num,
     "HIV (%)" = hiv_perc,
     "Recruitment strategy" = recruitment,
-    "ROB score" = rob_score,
+    "ROB score" = rob_score_3cat,
     "Identified via search" = rayyan
   )
 
