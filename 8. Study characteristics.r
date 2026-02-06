@@ -131,6 +131,9 @@ all_studies <- all_studies %>%
     hiv_num,
     hiv_perc,
     recruitment,
+    representative,
+    adjust,
+    design,
     rob_score_3cat,
     rayyan
   ) %>%
@@ -150,6 +153,9 @@ all_studies <- all_studies %>%
     "HIV (n)" = hiv_num,
     "HIV (%)" = hiv_perc,
     "Recruitment strategy" = recruitment,
+    "Representativeness" = representative,
+    "Model type" = adjust,
+    "Longitudinal design" = design,
     "ROB score" = rob_score_3cat,
     "Identified via search" = rayyan
   )
@@ -158,6 +164,28 @@ all_studies <- all_studies %>%
 write_xlsx(all_studies, "All studies.xlsx")
 
 # characteristics of included studies
+
+# Table: Count of adjusted and unadjusted estimates
+adjust_count_table <- fsw_data_all %>%
+  group_by(adjust) %>%
+  summarise(n = n()) %>%
+  mutate(percentage = round((n / sum(n)) * 100, 1))
+print(adjust_count_table)
+
+# Number and percentage of cross_sectional studies
+cross_sectional_count_table <- fsw_data_all %>%
+  group_by(design) %>%
+  summarise(n = n()) %>%
+  mutate(percentage = round((n / sum(n)) * 100, 1))
+print(cross_sectional_count_table)
+
+# Number and percentage of representative studies
+n_representative <- all_studies %>%
+  summarise(
+    n = sum(`Representativeness` == "Random sampling", na.rm = TRUE),
+    percentage = round(100 * n / n(), 1)
+  )
+print(n_representative)
 
 # Descriptive table for WHO region
 who_region_table <- all_studies %>%
@@ -253,6 +281,14 @@ violence_summary_tables <- list(
 
 # Write to Excel (each table as a sheet)
 write_xlsx(violence_summary_tables, "Violence study and estimate counts.xlsx")
+
+# Number of unique studies reporting recent exposure
+n_recent <- fsw_data_all %>% filter(exposure_tf_bin == "Recent") %>% summarise(n = n_distinct(study))
+print(n_recent)
+
+# Number of unique studies reporting lifetime (ever) exposure
+n_ever <- fsw_data_all %>% filter(exposure_tf_bin == "Ever") %>% summarise(n = n_distinct(study))
+print(n_ever)
 
 # Filter to relevant columns
 violence_df <- fsw_data_all %>%
