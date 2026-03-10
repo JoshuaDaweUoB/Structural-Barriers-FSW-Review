@@ -29,7 +29,7 @@ all_studies <- fsw_data_all %>%
 n_unique_studies <- n_distinct(all_studies$study)
 print(n_unique_studies)
 
-# Create categories for hiv_perc
+# categories for hiv_perc
 hiv_prevalence_studies <- fsw_data_prev %>%
   mutate(
     hiv_perc = as.numeric(hiv_perc),
@@ -51,30 +51,29 @@ hiv_prevalence_studies <- fsw_data_prev %>%
     )
   )
 
-# Summarize hiv_perc_cat by sample_size_cat
+# hiv_perc_cat by sample_size_cat
 summary_table <- hiv_prevalence_studies %>%
   group_by(sample_size_cat) %>%
   count(hiv_perc_cat) %>%
   mutate(percentage = round((n / sum(n)) * 100, 2)) %>%
   ungroup()
 
-# Print the summary table
 print(summary_table)
 
-# Create sample_size_quartile
+# sample_size_quartile
 hiv_prevalence_studies <- hiv_prevalence_studies %>%
   mutate(
     sample_size_quartile = ntile(analytical_sample_size, 4)
   )
 
-# Calculate the average hiv_perc within each sample_size_quartile
+# average hiv_perc within each sample_size_quartile
 average_hiv_prev <- hiv_prevalence_studies %>%
   group_by(sample_size_quartile) %>%
   summarise(
     avg_hiv_prev = mean(as.numeric(hiv_perc), na.rm = TRUE),
     n = n()
   )
-# Print the result
+
 print(average_hiv_prev)
 
 # study characteristics
@@ -107,16 +106,15 @@ all_studies <- all_studies %>%
     location = paste0(cities, ", ", country) 
   )
 
-# Calculate the number of unique values in the country variable
+# number of unique values in the country variable
 num_unique_countries <- all_studies %>%
   summarise(unique_countries = n_distinct(country))
 
-# Print the result
 print(num_unique_countries)
 
-# Update the all_studies dataframe
+# all_studies dataframe
 all_studies <- all_studies %>%
-  # Select and reorder the columns
+  # select
   select(
     study,
     title,
@@ -138,7 +136,7 @@ all_studies <- all_studies %>%
     rayyan
   ) %>%
 
-  # Rename the columns
+  # rename
   rename(
     "study" = study,
     "Title" = title,
@@ -160,26 +158,26 @@ all_studies <- all_studies %>%
     "Identified via search" = rayyan
   )
 
-# save the all_studies dataframe to an Excel file
+# save
 write_xlsx(all_studies, "All studies.xlsx")
 
 # characteristics of included studies
 
-# Table: Count of adjusted and unadjusted estimates
+# adjusted and unadjusted estimates
 adjust_count_table <- fsw_data_all %>%
   group_by(adjust) %>%
   summarise(n = n()) %>%
   mutate(percentage = round((n / sum(n)) * 100, 1))
 print(adjust_count_table)
 
-# Number and percentage of cross_sectional studies
+# number and percentage of cross_sectional studies
 cross_sectional_count_table <- fsw_data_all %>%
   group_by(design) %>%
   summarise(n = n()) %>%
   mutate(percentage = round((n / sum(n)) * 100, 1))
 print(cross_sectional_count_table)
 
-# Number and percentage of representative studies
+# number and percentage of representative studies
 n_representative <- all_studies %>%
   summarise(
     n = sum(`Representativeness` == "Random sampling", na.rm = TRUE),
@@ -187,51 +185,50 @@ n_representative <- all_studies %>%
   )
 print(n_representative)
 
-# Descriptive table for WHO region
+# table for WHO region
 who_region_table <- all_studies %>%
   count(`WHO region`) %>%  # Use backticks for column names with spaces
   mutate(percentage = n / sum(n) * 100)  # Calculate percentages
 
-# Descriptive table for study design
+# table for study design
 study_design_table <- all_studies %>%
   count(`Study design`) %>%  # Use backticks for column names with spaces
   mutate(percentage = n / sum(n) * 100)  # Calculate percentages
 
-# Count the number of unique countries in all_studies
+# number of unique countries in all_studies
 num_unique_countries <- all_studies %>% summarise(unique_countries = n_distinct(Country))
 print(num_unique_countries)
 
-# Descriptive table for "Publication type"
+# table for publication type
 pub_type_table <- all_studies %>%
   count(`Publication type`) %>%  # Use backticks for column names with spaces
   mutate(percentage = n / sum(n) * 100)  # Calculate percentages
 
-# Descriptive table for study quality
+# table for study quality
 study_quality_table <- all_studies %>%
   count(`ROB score`) %>%
   mutate(percentage = n / sum(n) * 100)
  
-# Print the tables
+# print
 print(who_region_table)
 print(pub_type_table)
 print(study_design_table)
 print(study_quality_table)
 
-# Calculate total Sample size and total HIV (n)
+# sample size
 totals_table <- all_studies %>%
   summarise(
     total_sample_size = sum(as.numeric(`Analytic sample size`), na.rm = TRUE), 
     total_hiv_n = sum(as.numeric(`HIV (n)`), na.rm = TRUE)   
   )
 
-# Print the totals table
 print(totals_table)
 
 ## total studies for violence types
 violence_df <- fsw_data_all %>%
   select(study, exposure_tf_bin, outcome, exposure_type, exposed_num, exposed_perc, analytical_sample_size)
 
-# Function to get study and estimate counts
+# study and estimate counts
 get_counts <- function(type) {
   df <- fsw_data_all %>% filter(exposure_type == type)
   n_studies <- n_distinct(df$study)
@@ -243,7 +240,7 @@ get_counts <- function(type) {
   )
 }
 
-# Create summary table for each violence type
+# summary table for each violence type
 violence_types <- c(
   "Physical violence",
   "Sexual violence",
@@ -253,7 +250,7 @@ violence_types <- c(
 
 violence_counts_table <- bind_rows(lapply(violence_types, get_counts))
 
-# Studies missing exposure data (no exposed_num and no exposed_perc)
+# missing exposure data (no exposed_num and no exposed_perc)
 missing_exposure <- violence_df %>%
   mutate(
     exposed_num = as.numeric(exposed_num),
@@ -272,38 +269,35 @@ missing_table <- tibble(
 
 n_missing_total <- n_distinct(missing_exposure$study)
 
-# Combine all results into one list for easy export
 violence_summary_tables <- list(
   violence_counts = violence_counts_table,
   missing_counts = missing_table,
   n_missing_total = tibble(n_missing_total = n_missing_total)
 )
 
-# Write to Excel (each table as a sheet)
+# save
 write_xlsx(violence_summary_tables, "Violence study and estimate counts.xlsx")
 
-# Number of unique studies reporting recent exposure
+# unique studies reporting recent exposure
 n_recent <- fsw_data_all %>% filter(exposure_tf_bin == "Recent") %>% summarise(n = n_distinct(study))
 print(n_recent)
 
-# Number of unique studies reporting lifetime (ever) exposure
+# unique studies reporting lifetime (ever) exposure
 n_ever <- fsw_data_all %>% filter(exposure_tf_bin == "Ever") %>% summarise(n = n_distinct(study))
 print(n_ever)
 
-# Filter to relevant columns
+# relevant columns
 violence_df <- fsw_data_all %>%
   filter(use_exposed == "yes") %>%
   select(study, exposure_tf_bin, outcome, exposure_type, exposure_definition_short, perpetrator, exposed_num, exposed_perc, analytical_sample_size, hiv_num)
 
-# Define the types of violence and their corresponding sheet names
+# types of violence and their corresponding sheet names
 violence_types <- c("Physical violence", "Sexual violence", "Physical or sexual", "Other violence")
 
-# Initialize an empty list to store the results for each type of violence
 all_violence_studies_list <- list()
 
-# Loop over each type of violence
+# loop over each type of violence
 for (violence in violence_types) {
-  # Filter for "Ever" and "Recent" exposures for the current type of violence
   ever_stud <- violence_df %>%
     filter(exposure_type == violence, exposure_tf_bin == "Ever") %>%
     select(study)
@@ -311,12 +305,10 @@ for (violence in violence_types) {
     filter(exposure_type == violence, exposure_tf_bin == "Recent") %>%
     select(study)
   
-  # Combine and deduplicate studies
   combined_studies <- bind_rows(ever_stud, recent_stud) %>%
     arrange(study) %>%
     distinct(study, .keep_all = TRUE)
   
-  # Store the result in the list
   all_violence_studies_list[[violence]] <- combined_studies
 }
 
