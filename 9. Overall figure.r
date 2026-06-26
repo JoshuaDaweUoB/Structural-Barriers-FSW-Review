@@ -3,7 +3,7 @@
 pacman::p_load("meta", "metafor", "readxl", "openxlsx", "tidyverse", "kableExtra", "robumeta", "clubSandwich") 
 
 # set working directory
-setwd("C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence")
+setwd("C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Analysis/Structural-Barriers-FSW-Review")
 
 # load data
 fsw_data_overall <- read_excel("Violence estimates.xlsx", "All studies") %>%

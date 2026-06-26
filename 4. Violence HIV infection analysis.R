@@ -2,7 +2,7 @@
 pacman::p_load("meta", "metafor", "readxl", "openxlsx", "tidyverse", "kableExtra", "robumeta", "clubSandwich", "grid", "png", "gridExtra") 
 
 # set working directory
-setwd("C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence")
+setwd("C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Analysis/Structural-Barriers-FSW-Review")
 
 # settings
 settings.meta(CIbracket = "(") 
@@ -186,7 +186,56 @@ perform_all_violence_analysis <- function(df, analysis, exposure) {
   png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
   funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
   dev.off()
+
+  # trim and fill analysis
+  tf_result <- trimfill(result2)
+  print(summary(tf_result))
+  print(paste("Studies trimmed and filled:", tf_result$k0))
+  
+  # compare original vs adjusted estimates
+  print("Original random effect estimate (OR):")
+  print(exp(result2$TE.random))
+  print("Trim and fill adjusted estimate (OR):")
+  print(exp(tf_result$TE.random))
+  
+  # trim and fill funnel plot
+  tf_funnel_label <- paste0(funnel_label, " - Trim and Fill")
+  tf_funnel_filename <- paste0("Plots/prevalence/all violence/funnel plots/", tf_funnel_label, ".png")
+  
+  png(filename = tf_funnel_filename, width = 15, height = 15, units = "cm", res = 300)
+  funnel(tf_result, main = paste0(tf_funnel_label, "\nStudies trimmed: ", tf_result$k0))
+  dev.off()
+
+trim_fill_results <<- rbind(trim_fill_results, data.frame(
+   analysis_type = "All violence",
+   violence_type = NA,
+   exposure = exposure,
+   analysis = analysis,
+   original_or = exp(result2$TE.random),
+   original_ci_lower = exp(result2$lower.random),
+   original_ci_upper = exp(result2$upper.random),
+   tf_or = exp(tf_result$TE.random),
+   tf_ci_lower = exp(tf_result$lower.random),
+   tf_ci_upper = exp(tf_result$upper.random),
+   studies_trimmed = tf_result$k0
+ ))
 }
+
+# create dataframe to store results
+trim_fill_results <- data.frame(
+  analysis_type = character(),
+  violence_type = character(),
+  exposure = character(),
+  analysis = character(),
+  original_or = numeric(),
+  original_ci_lower = numeric(),
+  original_ci_upper = numeric(),
+  tf_or = numeric(),
+  tf_ci_lower = numeric(),
+  tf_ci_upper = numeric(),
+  studies_trimmed = numeric(),
+  stringsAsFactors = FALSE
+)
 
 # run for recent and ever
 for (exposure in c("Recent", "Ever")) {
@@ -200,6 +249,13 @@ get_all_violence_funnel_path <- function(analysis, exposure) {
   paste0(
     "Plots/prevalence/all violence/funnel plots/",
     analysis_labels[[analysis]], " - ", exposure_labels[[exposure]], ".png"
+  )
+}
+
+get_all_violence_tf_funnel_path <- function(analysis, exposure) {
+  paste0(
+    "Plots/prevalence/all violence/funnel plots/",
+    analysis_labels[[analysis]], " - ", exposure_labels[[exposure]], " - Trim and Fill.png"
   )
 }
 
@@ -226,6 +282,32 @@ grid.arrange(
   nrow = length(exposures),
   ncol = length(analyses),
   top = "All violence: Funnel plots"
+)
+dev.off()
+
+# trim and fill funnel plots list
+all_tf_funnel_imgs <- vector("list", length = length(exposures) * length(analyses))
+idx <- 1
+for (i in seq_along(exposures)) {
+  for (j in seq_along(analyses)) {
+    file <- get_all_violence_tf_funnel_path(analyses[j], exposures[i])
+    if (file.exists(file)) {
+      all_tf_funnel_imgs[[idx]] <- rasterGrob(readPNG(file), interpolate = TRUE)
+    } else {
+      all_tf_funnel_imgs[[idx]] <- nullGrob()
+    }
+    idx <- idx + 1
+  }
+}
+
+# combine trim and fill figures
+tf_combined_filename <- "Plots/prevalence/all violence/funnel plots/all_violence_funnel_grid_TrimFill.png"
+png(tf_combined_filename, width = 1800, height = 1200, res = 150)
+grid.arrange(
+  grobs = all_tf_funnel_imgs,
+  nrow = length(exposures),
+  ncol = length(analyses),
+  top = "All violence: Funnel plots - Trim and Fill"
 )
 dev.off()
 
@@ -334,6 +416,39 @@ funnel_filename <- paste0("Plots/prevalence/violence by type/funnel plots/", fun
 png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
 funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
 dev.off()
+
+  # trim and fill analysis
+  tf_result <- trimfill(result2)
+  print(summary(tf_result))
+  print(paste("Studies trimmed and filled:", tf_result$k0))
+  
+  # compare original vs adjusted estimates
+  print("Original random effect estimate (OR):")
+  print(exp(result2$TE.random))
+  print("Trim and fill adjusted estimate (OR):")
+  print(exp(tf_result$TE.random))
+  
+  # trim and fill funnel plot
+  tf_funnel_label <- paste0(violence_type_label, " - ", analysis_label, " - ", exposure_label, " - Trim and Fill")
+  tf_funnel_filename <- paste0("Plots/prevalence/violence by type/funnel plots/", tf_funnel_label, ".png")
+  
+  png(filename = tf_funnel_filename, width = 15, height = 15, units = "cm", res = 300)
+  funnel(tf_result, main = paste0(tf_funnel_label, "\nStudies trimmed: ", tf_result$k0))
+  dev.off()
+
+  trim_fill_results <<- rbind(trim_fill_results, data.frame(
+  analysis_type = "By violence type",
+  violence_type = violence_type,
+  exposure = exposure,
+  analysis = analysis,
+  original_or = exp(result2$TE.random),
+  original_ci_lower = exp(result2$lower.random),
+  original_ci_upper = exp(result2$upper.random),
+  tf_or = exp(tf_result$TE.random),
+  tf_ci_lower = exp(tf_result$lower.random),
+  tf_ci_upper = exp(tf_result$upper.random),
+  studies_trimmed = tf_result$k0
+))
 }
 
 # loop to create forest plots
@@ -354,7 +469,15 @@ get_funnel_path <- function(violence, analysis, exposure) {
   )
 }
 
+get_tf_funnel_path <- function(violence, analysis, exposure) {
+  paste0(
+    "Plots/prevalence/violence by type/funnel plots/",
+    violence, " - ", analysis_labels[[analysis]], " - ", exposure_labels[[exposure]], " - Trim and Fill.png"
+  )
+}
+
 for (violence in violence_types) {
+  # original funnel plots
   funnel_imgs <- vector("list", length = length(exposures) * length(analyses))
   idx <- 1
   for (i in seq_along(exposures)) { 
@@ -378,7 +501,85 @@ for (violence in violence_types) {
     top = violence
   )
   dev.off()
+  
+  # trim and fill combined plots
+  tf_funnel_imgs <- vector("list", length = length(exposures) * length(analyses))
+  idx <- 1
+  for (i in seq_along(exposures)) { 
+    for (j in seq_along(analyses)) { 
+      file <- get_tf_funnel_path(violence, analyses[j], exposures[i])
+      if (file.exists(file)) {
+        tf_funnel_imgs[[idx]] <- rasterGrob(readPNG(file), interpolate = TRUE)
+      } else {
+        tf_funnel_imgs[[idx]] <- nullGrob()
+      }
+      idx <- idx + 1
+    }
+  }
+  
+  tf_combined_filename <- paste0("Plots/prevalence/violence by type/funnel plots/", violence, "_funnel_grid_recent_ever_TrimFill.png")
+  png(tf_combined_filename, width = 1800, height = 1200, res = 150)
+  grid.arrange(
+    grobs = tf_funnel_imgs,
+    nrow = length(exposures),
+    ncol = length(analyses),
+    top = paste0(violence, " - Trim and Fill")
+  )
+  dev.off()
 }
+
+# format table for output
+trim_fill_table <- trim_fill_results %>%
+  mutate(
+    # Create a display name for violence type
+    violence_display = ifelse(is.na(violence_type), "All violence", violence_type),
+    original_effect = paste0(
+      sprintf("%.2f", original_or), 
+      " (", sprintf("%.2f", original_ci_lower), 
+      "-", sprintf("%.2f", original_ci_upper), ")"
+    ),
+    tf_effect = paste0(
+      sprintf("%.2f", tf_or), 
+      " (", sprintf("%.2f", tf_ci_lower), 
+      "-", sprintf("%.2f", tf_ci_upper), ")"
+    )
+  ) %>%
+  select(
+    analysis_type, violence_display, exposure, analysis,
+    original_effect, tf_effect, studies_trimmed
+  ) %>%
+  rename(
+    "Analysis Type" = analysis_type,
+    "Violence Type" = violence_display,
+    "Exposure" = exposure,
+    "Model" = analysis,
+    "Original OR (95% CI)" = original_effect,
+    "Trim & Fill OR (95% CI)" = tf_effect,
+    "Studies Trimmed" = studies_trimmed
+  )
+
+# create workbook
+wb <- createWorkbook()
+addWorksheet(wb, "Trim and Fill Results")
+
+# add title
+writeData(wb, sheet = 1, x = "Comparison of Original vs Trim and Fill Pooled Effects", startRow = 1)
+
+# add table data starting at row 3
+writeData(wb, sheet = 1, x = trim_fill_table, startRow = 3)
+
+# format header row (no background color)
+headerStyle <- createStyle(textDecoration = "bold", 
+                           halign = "center", valign = "center", wrapText = TRUE)
+for (col in 1:ncol(trim_fill_table)) {
+  addStyle(wb, sheet = 1, style = headerStyle, rows = 3, cols = col)
+}
+
+# auto-fit column widths
+setColWidths(wb, sheet = 1, cols = 1:ncol(trim_fill_table), widths = "auto")
+
+# save workbook
+saveWorkbook(wb, "Plots/trim_fill_comparison_table.xlsx", overwrite = TRUE)
 
 ## subgroup analysis
 
@@ -411,3 +612,4 @@ for (exposure in c("Recent", "Ever")) {
     perform_all_violence_analysis_rho2(fsw_data_prev, analysis, exposure)
   }
 }
+

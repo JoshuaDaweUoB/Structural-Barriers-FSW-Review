@@ -1,4 +1,4 @@
-# Load required packages
+# load packages
 pacman::p_load("readxl", "writexl", "tidyverse", "metafor")
 
 # hiv prev studies

@@ -88,7 +88,7 @@ create_study_effect_nums <- function(df) {
 ## subgroup function
 
 # list for loops and functions
-subgroup_columns <- c("whoregion", "pre2017", "recruitment", "perpetrator", "representative", "adjust", "rob_score_3cat")
+subgroup_columns <- c("whoregion", "pre2017", "recruitment", "perpetrator", "representative", "adjust", "rob_score_3cat", "sw_time_frame_bin")
 
 # function meta analysis
 process_and_plot <- function(data, data_name, output_plot_filename) {
@@ -214,6 +214,10 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
     subgroup_level == "representative_Random sampling" ~ "Random sampling",
     subgroup_level == "adjust_Unadjusted" ~ "Unadjusted",
     subgroup_level == "adjust_Adjusted" ~ "Adjusted",
+    subgroup_level == "time_frame_bin_Recent" ~ "Recent",
+    subgroup_level == "time_frame_bin_Ever" ~ "Ever",
+    subgroup_level == "time_frame_bin_NR" ~ "Not reported",
+
     TRUE ~ subgroup_level
     )) %>%
     mutate(subgroup = case_when(
@@ -224,6 +228,7 @@ process_and_plot <- function(data, data_name, output_plot_filename) {
       subgroup == "rob" ~ "Study quality",
       subgroup == "representative" ~ "Representativeness",
       subgroup == "adjust" ~ "Confounder adjusted",
+      subgroup == "sw" ~ "Timeframe of sex work",
       TRUE ~ subgroup
     ))
   

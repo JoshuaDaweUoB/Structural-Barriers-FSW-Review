@@ -4,7 +4,7 @@ pacman::p_load("readxl", "tidyverse", "writexl")
 ## load data ##
 
 # set wd
-setwd("C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Violence")
+setwd("C:/Users/vl22683/OneDrive - University of Bristol/Documents/Misc/UNAIDS/FSW/Analysis/Analysis/Structural-Barriers-FSW-Review")
 
 ## load all data
 fsw_data_all <- read_excel("Final data extraction_checked_clean.xlsx", "Final data extraction") 
