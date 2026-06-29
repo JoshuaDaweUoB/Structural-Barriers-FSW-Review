@@ -465,13 +465,13 @@ formatted_data <- fsw_data_all %>%
     exposed_perc = exposed_perc,
     perpetrator = perpetrator,
     outcome = outcome,
+    adjusted_for = adjusted_for,
     unadj_effect = unadj_est,
     unadj_lower = un_lower,
     unadj_upper = un_upper,
     adj_effect = adj_est,
     adj_lower = adj_lower,
-    adj_upper = adj_upper,
-    exposure_type = exposure_type
+    adj_upper = adj_upper
   ) %>%
   mutate(
     exposed_num = as.numeric(exposed_num),
@@ -481,6 +481,7 @@ formatted_data <- fsw_data_all %>%
                      paste0(exposed_num, " (", round(exposed_perc * 100, 0), "%)"),
                      "NR"),
     perpetrator = ifelse(is.na(perpetrator), "Any perpetrator", perpetrator),
+    adjusted_for = ifelse(is.na(adjusted_for), "NR", adjusted_for),
     unadj_ci = ifelse(!is.na(unadj_effect), 
                       paste0("OR: ", trimws(format(round(unadj_effect, 2), nsmall = 2)), " (", 
                              trimws(format(round(unadj_lower, 2), nsmall = 2)), "–", 
@@ -503,13 +504,13 @@ formatted_data <- fsw_data_all %>%
     `Violence time frame` = violence_time_frame,
     `Exposed, n (%)` = exposed,
     `Perpetrator` = perpetrator,
-    `Outcome` = outcome, 
-    `Effect size (95% CI)` = effect_size,
-    `Violence type` = exposure_type
+    `Outcome` = outcome,
+    `Adjusted for` = adjusted_for,
+    `Effect size (95% CI)` = effect_size
   )
 
-violence_sheets <- split(formatted_data, formatted_data$`Violence type`)
+violence_sheets <- split(formatted_data, fsw_data_all$exposure_type)
 names(violence_sheets) <- names(violence_sheets) %>%
-  str_replace_all("[\\[\\]:*?/\\\\]", "_") 
+  str_replace_all("[\\[\\]:*?/\\\\]", "_")
 
 write_xlsx(violence_sheets, "Formatted Violence Data by Type.xlsx")
