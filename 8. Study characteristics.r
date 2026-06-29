@@ -133,7 +133,8 @@ all_studies <- all_studies %>%
     adjust,
     design,
     rob_score_3cat,
-    rayyan
+    rayyan,
+    income_cat
   ) %>%
 
   # rename
@@ -155,7 +156,8 @@ all_studies <- all_studies %>%
     "Model type" = adjust,
     "Longitudinal design" = design,
     "ROB score" = rob_score_3cat,
-    "Identified via search" = rayyan
+    "Identified via search" = rayyan,
+    "Country-level income" = income_cat
   )
 
 # save
@@ -187,13 +189,13 @@ print(n_representative)
 
 # table for WHO region
 who_region_table <- all_studies %>%
-  count(`WHO region`) %>%  # Use backticks for column names with spaces
-  mutate(percentage = n / sum(n) * 100)  # Calculate percentages
+  count(`WHO region`) %>%  
+  mutate(percentage = n / sum(n) * 100)  
 
 # table for study design
 study_design_table <- all_studies %>%
-  count(`Study design`) %>%  # Use backticks for column names with spaces
-  mutate(percentage = n / sum(n) * 100)  # Calculate percentages
+  count(`Study design`) %>% 
+  mutate(percentage = n / sum(n) * 100) 
 
 # number of unique countries in all_studies
 num_unique_countries <- all_studies %>% summarise(unique_countries = n_distinct(Country))
@@ -201,19 +203,25 @@ print(num_unique_countries)
 
 # table for publication type
 pub_type_table <- all_studies %>%
-  count(`Publication type`) %>%  # Use backticks for column names with spaces
-  mutate(percentage = n / sum(n) * 100)  # Calculate percentages
+  count(`Publication type`) %>% 
+  mutate(percentage = n / sum(n) * 100)  
 
 # table for study quality
 study_quality_table <- all_studies %>%
   count(`ROB score`) %>%
   mutate(percentage = n / sum(n) * 100)
- 
+
+# table for income cat
+income_table <- all_studies %>%
+  count(`Country-level income`) %>%
+  mutate(percentage = n / sum(n) * 100)
+
 # print
 print(who_region_table)
 print(pub_type_table)
 print(study_design_table)
 print(study_quality_table)
+print(income_table)
 
 # sample size
 totals_table <- all_studies %>%
@@ -505,8 +513,8 @@ formatted_data <- fsw_data_all %>%
     `Exposed, n (%)` = exposed,
     `Perpetrator` = perpetrator,
     `Outcome` = outcome,
-    `Adjusted for` = adjusted_for,
-    `Effect size (95% CI)` = effect_size
+    `Effect size (95% CI)` = effect_size,
+    `Adjusted for` = adjusted_for
   )
 
 violence_sheets <- split(formatted_data, fsw_data_all$exposure_type)
