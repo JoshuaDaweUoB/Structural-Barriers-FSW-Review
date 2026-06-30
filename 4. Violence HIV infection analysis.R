@@ -100,12 +100,10 @@ leftlabs <- list(
 # function to analyse violence overall with subgroups for exposure_type
 perform_all_violence_analysis <- function(df, analysis, exposure) {
   
-  # filter to infection
   filtered_df <- df %>%
     filter(outcome == "HIV prevalence", exposure_tf_bin == exposure) %>%
     filter(!is.na(.data[[var_names[[analysis]]$est]]))
 
-  # study_num and effect_num columns
   filtered_df <- filtered_df %>%
     arrange(study) %>%
     mutate(
@@ -114,13 +112,11 @@ perform_all_violence_analysis <- function(df, analysis, exposure) {
     ) %>%
     ungroup()
     
-  # covariance matrix assuming constant sampling correlation
   V_mat <- impute_covariance_matrix(filtered_df[[var_names[[analysis]]$var]],
                                     cluster = filtered_df$study_num,
                                     r = rho,
                                     smooth_vi = TRUE)
   
-  # multilevel random effects model using `rma.mv` from metafor
   result <- rma.mv(filtered_df[[var_names[[analysis]]$est]], 
                    V = V_mat, 
                    random = ~ 1 | study_num / effect_num,
@@ -150,10 +146,8 @@ perform_all_violence_analysis <- function(df, analysis, exposure) {
   result2$lower.random <- result$ci.lb
   result2$upper.random <- result$ci.ub
   
-  # create folder 
   filename <- paste0("Plots/prevalence/all violence/all_violence_", tolower(exposure), "_", analysis, ".png")
   png(filename = filename, width = 80, height = 60, units = "cm", res = 300) 
-  
   forest(
     result2,
     sortvar = filtered_df$study,
@@ -170,16 +164,12 @@ perform_all_violence_analysis <- function(df, analysis, exposure) {
     labeltext = TRUE,
     col.subgroup = "black",
   )
-
   dev.off()
 
-  # eggers test
   eggers <- metabias(result2, method.bias = "linreg")
   eggers_p <- if (!is.null(eggers$p.value)) eggers$p.value else NA
   eggers_p_str <- if (!is.na(eggers_p)) sprintf("p = %.3f", eggers_p) else ""
 
-  # funnel plot
-  funnel_filename <- paste0("Plots/prevalence/all violence/funnel plots/all_violence_", tolower(exposure), "_", analysis, "_funnel.png")
   funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[[tolower(exposure)]])
   funnel_filename <- paste0("Plots/prevalence/all violence/funnel plots/", funnel_label, ".png")
 
@@ -187,60 +177,14 @@ perform_all_violence_analysis <- function(df, analysis, exposure) {
   funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
   dev.off()
 
-  # trim and fill analysis
-  tf_result <- trimfill(result2)
-  print(summary(tf_result))
-  print(paste("Studies trimmed and filled:", tf_result$k0))
-  
-  # compare original vs adjusted estimates
-  print("Original random effect estimate (OR):")
-  print(exp(result2$TE.random))
-  print("Trim and fill adjusted estimate (OR):")
-  print(exp(tf_result$TE.random))
-  
-  # trim and fill funnel plot
-  tf_funnel_label <- paste0(funnel_label, " - Trim and Fill")
-  tf_funnel_filename <- paste0("Plots/prevalence/all violence/funnel plots/", tf_funnel_label, ".png")
-  
-  png(filename = tf_funnel_filename, width = 15, height = 15, units = "cm", res = 300)
-  funnel(tf_result, main = paste0(tf_funnel_label, "\nStudies trimmed: ", tf_result$k0))
-  dev.off()
-
-trim_fill_results <<- rbind(trim_fill_results, data.frame(
-   analysis_type = "All violence",
-   violence_type = NA,
-   exposure = exposure,
-   analysis = analysis,
-   original_or = exp(result2$TE.random),
-   original_ci_lower = exp(result2$lower.random),
-   original_ci_upper = exp(result2$upper.random),
-   tf_or = exp(tf_result$TE.random),
-   tf_ci_lower = exp(tf_result$lower.random),
-   tf_ci_upper = exp(tf_result$upper.random),
-   studies_trimmed = tf_result$k0
- ))
+  return(result2)
 }
 
-# create dataframe to store results
-trim_fill_results <- data.frame(
-  analysis_type = character(),
-  violence_type = character(),
-  exposure = character(),
-  analysis = character(),
-  original_or = numeric(),
-  original_ci_lower = numeric(),
-  original_ci_upper = numeric(),
-  tf_or = numeric(),
-  tf_ci_lower = numeric(),
-  tf_ci_upper = numeric(),
-  studies_trimmed = numeric(),
-  stringsAsFactors = FALSE
-)
-
-# run for recent and ever
+# run main analysis and store result2 objects
+all_violence_results <- list()
 for (exposure in c("Recent", "Ever")) {
   for (analysis in analyses) {
-    perform_all_violence_analysis(fsw_data_prev, analysis, exposure)
+    all_violence_results[[paste(exposure, analysis)]] <- perform_all_violence_analysis(fsw_data_prev, analysis, exposure)
   }
 }
 
@@ -249,13 +193,6 @@ get_all_violence_funnel_path <- function(analysis, exposure) {
   paste0(
     "Plots/prevalence/all violence/funnel plots/",
     analysis_labels[[analysis]], " - ", exposure_labels[[exposure]], ".png"
-  )
-}
-
-get_all_violence_tf_funnel_path <- function(analysis, exposure) {
-  paste0(
-    "Plots/prevalence/all violence/funnel plots/",
-    analysis_labels[[analysis]], " - ", exposure_labels[[exposure]], " - Trim and Fill.png"
   )
 }
 
@@ -284,6 +221,71 @@ grid.arrange(
   top = "All violence: Funnel plots"
 )
 dev.off()
+
+# trim and fill
+perform_all_violence_trimfill <- function(result2, analysis, exposure) {
+  
+  funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[[tolower(exposure)]])
+  
+  tf_result <- trimfill(result2)
+  print(summary(tf_result))
+  print(paste("Studies trimmed and filled:", tf_result$k0))
+  print("Original random effect estimate (OR):")
+  print(exp(result2$TE.random))
+  print("Trim and fill adjusted estimate (OR):")
+  print(exp(tf_result$TE.random))
+  
+  tf_funnel_label <- paste0(funnel_label, " - Trim and Fill")
+  tf_funnel_filename <- paste0("Plots/prevalence/all violence/funnel plots/", tf_funnel_label, ".png")
+  
+  png(filename = tf_funnel_filename, width = 15, height = 15, units = "cm", res = 300)
+  funnel(tf_result, main = paste0(tf_funnel_label, "\nStudies trimmed: ", tf_result$k0))
+  dev.off()
+
+  trim_fill_results <<- rbind(trim_fill_results, data.frame(
+    analysis_type = "All violence",
+    violence_type = NA,
+    exposure = exposure,
+    analysis = analysis,
+    original_or = exp(result2$TE.random),
+    original_ci_lower = exp(result2$lower.random),
+    original_ci_upper = exp(result2$upper.random),
+    tf_or = exp(tf_result$TE.random),
+    tf_ci_lower = exp(tf_result$lower.random),
+    tf_ci_upper = exp(tf_result$upper.random),
+    studies_trimmed = tf_result$k0
+  ))
+}
+
+# create dataframe to store trim and fill results
+trim_fill_results <- data.frame(
+  analysis_type = character(),
+  violence_type = character(),
+  exposure = character(),
+  analysis = character(),
+  original_or = numeric(),
+  original_ci_lower = numeric(),
+  original_ci_upper = numeric(),
+  tf_or = numeric(),
+  tf_ci_lower = numeric(),
+  tf_ci_upper = numeric(),
+  studies_trimmed = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# run trim and fill
+for (exposure in c("Recent", "Ever")) {
+  for (analysis in analyses) {
+    perform_all_violence_trimfill(all_violence_results[[paste(exposure, analysis)]], analysis, exposure)
+  }
+}
+
+get_all_violence_tf_funnel_path <- function(analysis, exposure) {
+  paste0(
+    "Plots/prevalence/all violence/funnel plots/",
+    analysis_labels[[analysis]], " - ", exposure_labels[[exposure]], " - Trim and Fill.png"
+  )
+}
 
 # trim and fill funnel plots list
 all_tf_funnel_imgs <- vector("list", length = length(exposures) * length(analyses))
