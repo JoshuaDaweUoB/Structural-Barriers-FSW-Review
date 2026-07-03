@@ -615,3 +615,79 @@ for (exposure in c("Recent", "Ever")) {
   }
 }
 
+## standalone forest plot: physical and/or sexual violence, recent exposure, excluding Budhwani
+
+
+analysis <- "best"
+
+filtered_df <- fsw_data_psv_recent_nobud %>%
+  filter(outcome == "HIV prevalence") %>%
+  filter(!is.na(.data[[var_names[[analysis]]$est]])) %>%
+  arrange(study) %>%
+  mutate(
+    study_num = cumsum(!duplicated(title)),
+    effect_num = row_number()
+  ) %>%
+  ungroup()
+
+V_mat <- impute_covariance_matrix(
+  filtered_df[[var_names[[analysis]]$var]],
+  cluster = filtered_df$study_num,
+  r = rho,
+  smooth_vi = TRUE
+)
+
+result <- rma.mv(
+  filtered_df[[var_names[[analysis]]$est]],
+  V = V_mat,
+  random = ~ 1 | study_num / effect_num,
+  data = filtered_df,
+  sparse = TRUE,
+  control = list(
+    optimizer = "nlminb",
+    iter.max = 10000,
+    eval.max = 10000,
+    rel.tol = 1e-8
+  )
+)
+
+print(result)
+print(exp(coef(result)))
+
+result2 <- metagen(
+  TE = filtered_df[[var_names[[analysis]]$est]],
+  lower = filtered_df[[var_names[[analysis]]$lower]],
+  upper = filtered_df[[var_names[[analysis]]$upper]],
+  studlab = filtered_df$study,
+  data = filtered_df,
+  sm = "OR",
+  method.tau = "REML",
+  common = FALSE,
+  random = TRUE,
+  backtransf = TRUE,
+  text.random = "Overall"
+)
+
+result2$TE.random <- result$b
+result2$lower.random <- result$ci.lb
+result2$upper.random <- result$ci.ub
+
+filename <- "Plots/prevalence/violence by type/psv_recent_nobud_best.png"
+png(filename = filename, width = 45, height = 22, units = "cm", res = 600)
+forest(
+  result2,
+  sortvar = filtered_df$study,
+  xlim = c(0.2, 4),
+  leftcols = leftcols_recent,
+  leftlabs = leftlabs_recent,
+  rightcols = rightcols,
+  rightlabs = rightlabs,
+  pooled.totals = TRUE,
+  xintercept = 1,
+  addrow.overall = TRUE,
+  overall.hetstat = TRUE,
+  overall = TRUE,
+  labeltext = TRUE,
+  col.subgroup = "black"
+)
+dev.off()
