@@ -222,6 +222,16 @@ grid.arrange(
 )
 dev.off()
 
+# combine figures - tiff version
+combined_filename_tiff <- "Plots/prevalence/all violence/funnel plots/all_violence_funnel_grid.tiff"
+tiff(combined_filename_tiff, width = 1800, height = 1200, res = 150)
+grid.arrange(
+  grobs = all_funnel_imgs,
+  nrow = length(exposures),
+  ncol = length(analyses)
+)
+dev.off()
+
 # trim and fill
 perform_all_violence_trimfill <- function(result2, analysis, exposure) {
   
@@ -599,7 +609,7 @@ process_and_plot(
   output_plot_filename = "Plots/subgroups/ever_any_violence_subgroup.png"
 )
 
-## sensitivity analysis
+# sensitivity analysis
 
 # run for recent and ever violence and rho = 0.4
 for (exposure in c("Recent", "Ever")) {
@@ -615,8 +625,7 @@ for (exposure in c("Recent", "Ever")) {
   }
 }
 
-## standalone forest plot: physical and/or sexual violence, recent exposure, excluding Budhwani
-
+# physical and/or sexual violence, recent exposure excluding Budhwani
 
 analysis <- "best"
 

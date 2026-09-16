@@ -32,7 +32,7 @@ summary_hiv_violence <- metagen(TE = effect_ln,
   print(summary(summary_hiv_violence))
   
   # save forest plot
-  tiff(filename = "Plots/overall plots/violence_all_analyses.tiff", width = 30, height = 40, units = "cm", res = 600)
+  tiff(filename = "Plots/overall plots/violence_all_analyses.tiff", width = 25, height = 20, units = "cm", res = 600)
   forest(summary_hiv_violence, 
          sortvar = outcome,
          xlim = c(0.2, 4),             
@@ -74,7 +74,7 @@ fsw_data_overall_ever$i2 <- round(fsw_data_overall_ever$i2 * 100, 0)
   print(summary(summary_hiv_violence_ever))
   
   # save forest plot
-  tiff(filename = "Plots/overall plots/violence_all_analyses_ever.tiff", width = 30, height = 28, units = "cm", res = 600)
+  tiff(filename = "Plots/overall plots/violence_all_analyses_ever.tiff", width = 25, height = 20, units = "cm", res = 600)
   forest(summary_hiv_violence_ever, 
          sortvar = outcome,
          xlim = c(0.2, 4),             
@@ -116,7 +116,7 @@ fsw_data_overall_recent$i2 <- round(fsw_data_overall_recent$i2 * 100, 0)
   print(summary(summary_hiv_violence_rec))
   
   # save forest plot
-  tiff(filename = "Plots/overall plots/violence_all_analyses_recent.tiff", width = 30, height = 28, units = "cm", res = 600)
+  tiff(filename = "Plots/overall plots/violence_all_analyses_recent.tiff", width = 25, height = 20, units = "cm", res = 600)
   forest(summary_hiv_violence_rec, 
          sortvar = outcome,
          xlim = c(0.2, 4),             
