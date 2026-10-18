@@ -173,7 +173,7 @@ perform_all_violence_analysis <- function(df, analysis, exposure) {
   funnel_label <- paste0(analysis_labels[[analysis]], " - ", exposure_labels[[tolower(exposure)]])
   funnel_filename <- paste0("Plots/prevalence/all violence/funnel plots/", funnel_label, ".png")
 
-  png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 300)
+  png(filename = funnel_filename, width = 15, height = 15, units = "cm", res = 600)
   funnel(result2, main = paste0(funnel_label, "\nEgger's test ", eggers_p_str))
   dev.off()
 
@@ -213,7 +213,7 @@ for (i in seq_along(exposures)) {
 
 # combine figures 
 combined_filename <- "Plots/prevalence/all violence/funnel plots/all_violence_funnel_grid.png"
-png(combined_filename, width = 1800, height = 1200, res = 150)
+png(combined_filename, width = 1800, height = 1200, res = 600)
 grid.arrange(
   grobs = all_funnel_imgs,
   nrow = length(exposures),
@@ -224,7 +224,7 @@ dev.off()
 
 # combine figures - tiff version
 combined_filename_tiff <- "Plots/prevalence/all violence/funnel plots/all_violence_funnel_grid.tiff"
-tiff(combined_filename_tiff, width = 1800, height = 1200, res = 150)
+tiff(combined_filename_tiff, width = 1800, height = 1200, res = 600)
 grid.arrange(
   grobs = all_funnel_imgs,
   nrow = length(exposures),
